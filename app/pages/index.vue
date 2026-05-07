@@ -178,13 +178,40 @@ async function selectHero(index) {
     }, 0)
 }
 
+function consumeIntroSkip() {
+  if (!import.meta.client) return false
+
+  const shouldSkipIntro = sessionStorage.getItem('atriSkipIntro') === '1'
+  if (shouldSkipIntro) {
+    sessionStorage.removeItem('atriSkipIntro')
+  }
+
+  return shouldSkipIntro
+}
+
 onMounted(() => {
+  const shouldSkipIntro = consumeIntroSkip()
+
   introPointer = {
     x: window.innerWidth / 2,
     y: window.innerHeight / 2
   }
 
   gsap.set(heroVisual.value, { '--move-x': '0px', '--move-y': '0px' })
+
+  heroItems.forEach((item) => {
+    const image = new Image()
+    image.src = item.image
+  })
+
+  if (shouldSkipIntro) {
+    introFinished.value = true
+    introVisible.value = false
+    showVideo.value = false
+    nextTick(syncThumbButtons)
+    return
+  }
+
   gsap.set(introClickCursor.value, introPointer)
   gsap.set(introVideoLayer.value, { opacity: 0 })
   gsap.set(introCard.value, { yPercent: 100 })
@@ -246,11 +273,6 @@ onMounted(() => {
 
   playCall = gsap.delayedCall(3.9, () => {
     openingVideo.value?.play().catch(() => {})
-  })
-
-  heroItems.forEach((item) => {
-    const image = new Image()
-    image.src = item.image
   })
 
   nextTick(syncThumbButtons)
