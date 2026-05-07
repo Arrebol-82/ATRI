@@ -1,6 +1,7 @@
 <script setup>
 import { gsap } from 'gsap'
-import { nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import HomeSidebar from '~/components/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
 
@@ -9,16 +10,206 @@ const navBackdrop = ref(null)
 const navPanel = ref(null)
 const navCloseButton = ref(null)
 const isSidebarOpen = ref(false)
+const selectedProduct = ref(null)
+const checkoutStep = ref('order')
+const quantity = ref(1)
+const customerName = ref('')
+const deliveryAddress = ref('')
+const paymentMethod = ref('card')
+const cardNumber = ref('')
+const cardPassword = ref('')
 const router = useRouter()
+const route = useRoute()
+
+const MERCHANDISE_RETURN_TARGET_KEY = 'atriMerchandiseReturnTarget'
 
 let navTimeline
 
 const { data: products, pending, error } = await useFetch('/api/merchandise')
 
+const checkoutSteps = [
+  { key: 'order', label: '下单' },
+  { key: 'confirm', label: '确认订单' },
+  { key: 'pay', label: '支付' }
+]
+
+const currentStepIndex = computed(() => checkoutSteps.findIndex((step) => step.key === checkoutStep.value))
+
+const unitPrice = computed(() => {
+  if (!selectedProduct.value) {
+    return 0
+  }
+
+  return Number(String(selectedProduct.value.priceDisplay ?? '').replace(/[^\d]/g, ''))
+})
+
+const normalizedQuantity = computed(() => Math.max(1, Math.floor(Number(quantity.value) || 1)))
+
+const totalPrice = computed(() => unitPrice.value * normalizedQuantity.value)
+
+const totalPriceDisplay = computed(() => {
+  if (!selectedProduct.value) {
+    return ''
+  }
+
+  if (!totalPrice.value) {
+    return selectedProduct.value.priceDisplay
+  }
+
+  return `JPY ${new Intl.NumberFormat('ja-JP').format(totalPrice.value)}`
+})
+
+const canConfirmOrder = computed(() => customerName.value.trim() && deliveryAddress.value.trim())
+const cardNumberDigits = computed(() => cardNumber.value.replace(/\D/g, ''))
+const canCompletePayment = computed(() => {
+  if (paymentMethod.value !== 'card') {
+    return true
+  }
+
+  return cardNumberDigits.value.length >= 12 && cardPassword.value.trim().length >= 4
+})
+
+watch(paymentMethod, (method) => {
+  if (method !== 'card') {
+    clearSensitivePayment()
+  }
+})
+
+function clearSensitivePayment() {
+  cardNumber.value = ''
+  cardPassword.value = ''
+}
+
+function openCheckout(product) {
+  selectedProduct.value = product
+  checkoutStep.value = 'order'
+  quantity.value = 1
+  customerName.value = ''
+  deliveryAddress.value = ''
+  paymentMethod.value = 'card'
+  clearSensitivePayment()
+}
+
+function closeCheckout() {
+  clearSensitivePayment()
+  selectedProduct.value = null
+  checkoutStep.value = 'order'
+}
+
+function increaseQuantity() {
+  quantity.value = normalizedQuantity.value + 1
+}
+
+function decreaseQuantity() {
+  quantity.value = Math.max(1, normalizedQuantity.value - 1)
+}
+
+function normalizeQuantity() {
+  quantity.value = normalizedQuantity.value
+}
+
+function goToConfirm() {
+  checkoutStep.value = 'confirm'
+}
+
+function goToPay() {
+  if (!canConfirmOrder.value) {
+    return
+  }
+
+  checkoutStep.value = 'pay'
+}
+
+function backCheckoutStep() {
+  if (checkoutStep.value === 'pay') {
+    clearSensitivePayment()
+    checkoutStep.value = 'confirm'
+    return
+  }
+
+  if (checkoutStep.value === 'confirm') {
+    checkoutStep.value = 'order'
+  }
+}
+
+function completePayment() {
+  if (!canCompletePayment.value) {
+    return
+  }
+
+  clearSensitivePayment()
+  checkoutStep.value = 'done'
+}
+
+function skipHomeIntroOnce() {
+  if (!import.meta.client) {
+    return
+  }
+
+  try {
+    sessionStorage.setItem('atriSkipIntro', '1')
+    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+  } catch {
+    // The home page can still load normally if session storage is unavailable.
+  }
+}
+
+function getSafeReturnTarget(value) {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  if (!value.startsWith('/') || value.startsWith('//')) {
+    return ''
+  }
+
+  return value
+}
+
+function getMerchandiseReturnTarget() {
+  const returnTo = Array.isArray(route.query.returnTo) ? route.query.returnTo[0] : route.query.returnTo
+  const safeRouteTarget = getSafeReturnTarget(returnTo)
+
+  if (safeRouteTarget) {
+    return safeRouteTarget
+  }
+
+  const from = Array.isArray(route.query.from) ? route.query.from[0] : route.query.from
+  if (from === 'story') {
+    return '/#story'
+  }
+
+  if (!import.meta.client) {
+    return ''
+  }
+
+  try {
+    return getSafeReturnTarget(sessionStorage.getItem(MERCHANDISE_RETURN_TARGET_KEY))
+  } catch {
+    return ''
+  }
+}
+
+function clearMerchandiseReturnTarget() {
+  if (!import.meta.client) {
+    return
+  }
+
+  try {
+    sessionStorage.removeItem(MERCHANDISE_RETURN_TARGET_KEY)
+  } catch {
+    // Returning still works if session storage is unavailable.
+  }
+}
 
 function goBack() {
-  if (import.meta.client) {
-    sessionStorage.setItem('atriSkipIntro', '1')
+  skipHomeIntroOnce()
+
+  const returnTarget = getMerchandiseReturnTarget()
+  if (returnTarget) {
+    clearMerchandiseReturnTarget()
+    navigateTo(returnTarget)
+    return
   }
 
   if (import.meta.client && window.history.state?.back) {
@@ -28,6 +219,12 @@ function goBack() {
 
   navigateTo('/')
 }
+
+onBeforeRouteLeave((to) => {
+  if (to.path === '/') {
+    skipHomeIntroOnce()
+  }
+})
 
 async function openSidebar() {
   isSidebarOpen.value = true
@@ -173,6 +370,280 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <div
+      v-if="selectedProduct"
+      class="fixed inset-0 z-[60] overflow-y-auto bg-[#f7fcfe]"
+    >
+      <section
+        class="checkout-dialog relative min-h-screen w-full overflow-hidden p-5 text-[#21485d] md:p-8 lg:p-10"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="`${selectedProduct.name} checkout`"
+      >
+        <div class="checkout-bubbles" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <button
+          type="button"
+          class="checkout-close fixed right-5 top-5 z-20 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#79d7f0] bg-white/92 text-[#21485d] shadow-[0_10px_22px_rgba(79,176,207,0.14)] backdrop-blur transition hover:bg-[#e8f9ff]"
+          aria-label="Close checkout"
+          @click="closeCheckout"
+        >
+          <span class="absolute h-[2px] w-5 rotate-45 rounded-full bg-current" />
+          <span class="absolute h-[2px] w-5 -rotate-45 rounded-full bg-current" />
+        </button>
+
+        <div class="relative z-[1] mx-auto max-w-[1180px] pr-14 text-center md:px-12">
+          <p class="text-xs font-black tracking-[0.22em] text-[#2f9ecd]">ATRI STORE</p>
+          <h2 class="mx-auto mt-2 max-w-[780px] text-[clamp(25px,4vw,42px)] font-black leading-tight text-[#21485d]">
+            {{ selectedProduct.name }}
+          </h2>
+        </div>
+
+        <div class="relative z-[1] mx-auto mt-6 grid max-w-[1180px] grid-cols-3 gap-3">
+          <div
+            v-for="(step, index) in checkoutSteps"
+            :key="step.key"
+            class="checkout-step"
+            :class="{ 'checkout-step-active': currentStepIndex >= index && checkoutStep !== 'done' }"
+          >
+            <span>{{ index + 1 }}</span>
+            <strong>{{ step.label }}</strong>
+          </div>
+        </div>
+
+        <div v-if="checkoutStep !== 'done'" class="relative z-[1] mx-auto mt-7 grid max-w-[1280px] gap-7 lg:grid-cols-[1fr_380px]">
+          <div class="min-w-0">
+            <div class="checkout-image mx-auto flex aspect-[1.22] max-w-[780px] items-center justify-center border-[5px] border-[#79d7f0] bg-white/96 p-5 shadow-[0_24px_60px_rgba(79,176,207,0.16)] md:p-8">
+              <img
+                :src="selectedProduct.imageUrl"
+                :alt="selectedProduct.name"
+                class="h-full w-full object-contain"
+              >
+            </div>
+
+            <div class="mt-6 grid gap-3 text-sm font-bold text-[#21485d] sm:grid-cols-3">
+              <div class="checkout-fact">
+                <span>分类</span>
+                <strong>{{ selectedProduct.category }}</strong>
+              </div>
+              <div class="checkout-fact">
+                <span>单价</span>
+                <strong>{{ selectedProduct.priceDisplay }}</strong>
+              </div>
+              <div class="checkout-fact">
+                <span>库存</span>
+                <strong>可下单</strong>
+              </div>
+            </div>
+          </div>
+
+          <aside class="checkout-panel border-[4px] border-[#79d7f0] bg-white/88 p-5 shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
+            <div v-if="checkoutStep === 'order'">
+              <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">ORDER</p>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">下单</h3>
+
+              <div class="mt-6 flex items-center justify-between gap-4 border-b border-[#c9edf8] pb-5">
+                <span class="text-sm font-black text-[#21485d]">数量</span>
+                <div class="flex h-11 items-center overflow-hidden rounded-full border-2 border-[#79d7f0] bg-[#e8f9ff]">
+                  <button
+                    type="button"
+                    class="h-full w-11 text-xl font-black transition hover:bg-[#d7f3fb]"
+                    aria-label="Decrease quantity"
+                    @click="decreaseQuantity"
+                  >
+                    -
+                  </button>
+                  <input
+                    v-model.number="quantity"
+                    type="number"
+                    min="1"
+                    inputmode="numeric"
+                    aria-label="Quantity"
+                    class="checkout-quantity-input"
+                    @blur="normalizeQuantity"
+                    @change="normalizeQuantity"
+                  >
+                  <button
+                    type="button"
+                    class="h-full w-11 text-xl font-black transition hover:bg-[#d7f3fb]"
+                    aria-label="Increase quantity"
+                    @click="increaseQuantity"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-5 flex items-end justify-between gap-4">
+                <span class="text-sm font-black text-[#21485d]">小计</span>
+                <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
+              </div>
+
+              <button
+                type="button"
+                class="checkout-primary mt-7"
+                @click="goToConfirm"
+              >
+                确认订单
+              </button>
+            </div>
+
+            <div v-else-if="checkoutStep === 'confirm'">
+              <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">CONFIRM</p>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">确认订单</h3>
+
+              <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
+                <span aria-hidden="true">←</span>
+                返回上一步
+              </button>
+
+              <label class="checkout-label mt-6">
+                <span>收货人</span>
+                <input v-model="customerName" type="text" autocomplete="name" placeholder="请输入姓名">
+              </label>
+
+              <label class="checkout-label mt-4">
+                <span>收货地址</span>
+                <textarea v-model="deliveryAddress" rows="4" placeholder="请输入收货地址" />
+              </label>
+
+              <div class="mt-5 space-y-3 border-t border-[#c9edf8] pt-5 text-sm font-bold text-[#21485d]">
+                <div class="flex justify-between gap-4">
+                  <span>商品</span>
+                  <strong class="text-right">{{ selectedProduct.name }}</strong>
+                </div>
+                <div class="flex justify-between gap-4">
+                  <span>数量</span>
+                  <strong>x {{ quantity }}</strong>
+                </div>
+                <div class="flex justify-between gap-4">
+                  <span>合计</span>
+                  <strong class="text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
+                </div>
+              </div>
+
+              <div class="mt-7 grid grid-cols-2 gap-3">
+                <button type="button" class="checkout-secondary checkout-bottom-back" @click="backCheckoutStep">
+                  返回上一步
+                </button>
+                <button type="button" class="checkout-secondary" @click="backCheckoutStep">
+                  返回
+                </button>
+                <button
+                  type="button"
+                  class="checkout-primary"
+                  :disabled="!canConfirmOrder"
+                  @click="goToPay"
+                >
+                  去支付
+                </button>
+              </div>
+            </div>
+
+            <div v-else-if="checkoutStep === 'pay'">
+              <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">PAYMENT</p>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">支付</h3>
+
+              <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
+                <span aria-hidden="true">←</span>
+                返回上一步
+              </button>
+
+              <div class="mt-6 space-y-3">
+                <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'card' }">
+                  <input v-model="paymentMethod" type="radio" value="card">
+                  <span>银行卡</span>
+                </label>
+                <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'wallet' }">
+                  <input v-model="paymentMethod" type="radio" value="wallet">
+                  <span>电子钱包</span>
+                </label>
+                <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'cod' }">
+                  <input v-model="paymentMethod" type="radio" value="cod">
+                  <span>到付</span>
+                </label>
+              </div>
+
+              <div v-if="paymentMethod === 'card'" class="checkout-card-fields mt-5">
+                <label class="checkout-label">
+                  <span>银行卡号</span>
+                  <input
+                    v-model="cardNumber"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    maxlength="23"
+                    placeholder="请输入银行卡号"
+                  >
+                </label>
+
+                <label class="checkout-label mt-4">
+                  <span>支付密码</span>
+                  <input
+                    v-model="cardPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    maxlength="12"
+                    placeholder="请输入支付密码"
+                  >
+                </label>
+
+                <p class="checkout-security-note mt-3">
+                  卡号和密码仅用于本次模拟支付，支付完成、返回或关闭后会立即清空，不会保存。
+                </p>
+              </div>
+
+              <div class="mt-6 rounded-[8px] bg-[#e8f9ff] p-4">
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-sm font-black text-[#21485d]">应付金额</span>
+                  <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
+                </div>
+              </div>
+
+              <div class="mt-7 grid grid-cols-2 gap-3">
+                <button type="button" class="checkout-secondary" @click="backCheckoutStep">
+                  返回
+                </button>
+                <button
+                  type="button"
+                  class="checkout-primary"
+                  :disabled="!canCompletePayment"
+                  @click="completePayment"
+                >
+                  立即支付
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div v-else class="checkout-done relative z-[1] mx-auto mt-8 max-w-[760px] border-[4px] border-[#79d7f0] bg-white/90 p-8 text-center shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
+          <p class="text-xs font-black tracking-[0.22em] text-[#2f9ecd]">ORDER COMPLETE</p>
+          <h3 class="mt-3 text-[clamp(28px,5vw,46px)] font-black text-[#21485d]">支付完成</h3>
+          <p class="mx-auto mt-4 max-w-[520px] text-sm font-bold leading-7 text-[#21485d]">
+            订单已生成，商品信息已确认。
+          </p>
+          <button type="button" class="checkout-primary mx-auto mt-7 max-w-[260px]" @click="closeCheckout">
+            完成
+          </button>
+        </div>
+
+      </section>
+    </div>
+
     <header class="relative z-10 mx-auto max-w-[1120px] pt-16 md:pt-14 lg:pt-12">
       <div class="flex items-end gap-4">
         <h1 class="text-[clamp(56px,8vw,104px)] font-black leading-none tracking-[0.02em] text-[#5fb8d7]">
@@ -208,7 +679,12 @@ onBeforeUnmount(() => {
           v-else
           v-for="product in products"
           :key="product.id"
-          class="product-card flex min-h-[430px] flex-col rounded-[14px] border-2 border-b-[6px] border-l-[6px] border-[#d3eef4] bg-white p-6 shadow-[0_4px_14px_rgba(91,174,201,0.08)]"
+          class="product-card group flex min-h-[430px] cursor-pointer flex-col rounded-[14px] border-2 border-b-[6px] border-l-[6px] border-[#d3eef4] bg-white p-6 shadow-[0_4px_14px_rgba(91,174,201,0.08)]"
+          role="button"
+          tabindex="0"
+          @click="openCheckout(product)"
+          @keydown.enter.prevent="openCheckout(product)"
+          @keydown.space.prevent="openCheckout(product)"
         >
           <div class="flex aspect-square items-center justify-center overflow-hidden rounded-[9px] border-2 border-[#dff2f6] bg-[#f7fcfe] p-3">
             <img
@@ -232,6 +708,10 @@ onBeforeUnmount(() => {
             <p class="mt-auto pt-5 text-sm font-bold tracking-[0.02em] text-[#102a3a]">
               {{ product.priceDisplay }}
             </p>
+
+            <span class="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#5fb8d7] px-5 text-sm font-black tracking-[0.1em] text-white transition group-hover:bg-[#4fb0cf]">
+              下单
+            </span>
           </div>
         </article>
       </div>
@@ -512,6 +992,449 @@ onBeforeUnmount(() => {
   transition-duration: 0.26s;
 }
 
+.product-card:focus-visible {
+  outline: 4px solid rgba(121, 215, 240, 0.72);
+  outline-offset: 4px;
+}
+
+.checkout-dialog {
+  isolation: isolate;
+  background-color: #f7fcfe;
+  background-image:
+    radial-gradient(circle at 8% 10%, rgba(255, 255, 255, 0.98) 0 170px, transparent 172px),
+    radial-gradient(circle at 92% 12%, rgba(232, 249, 255, 0.92) 0 130px, transparent 132px),
+    linear-gradient(180deg, #ffffff 0%, #f7fcfe 42%, #e8f9ff 100%);
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%;
+}
+
+.checkout-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.checkout-bubbles span {
+  position: absolute;
+  bottom: -160px;
+  display: block;
+  width: var(--bubble-size);
+  height: var(--bubble-size);
+  border: 3px solid rgba(95, 184, 215, 0.58);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.98) 0 15%, transparent 16%),
+    radial-gradient(circle at 68% 72%, rgba(121, 215, 240, 0.32) 0 22%, transparent 24%),
+    rgba(232, 249, 255, 0.5);
+  box-shadow:
+    inset 0 0 34px rgba(255, 255, 255, 0.92),
+    0 18px 42px rgba(79, 176, 207, 0.2);
+  animation:
+    bubble-float var(--bubble-duration) linear infinite,
+    bubble-pulse 4.8s ease-in-out infinite;
+  animation-delay: var(--bubble-delay);
+  left: var(--bubble-left);
+  opacity: var(--bubble-opacity);
+}
+
+.checkout-bubbles span:nth-child(1) {
+  --bubble-size: 92px;
+  --bubble-left: 6%;
+  --bubble-duration: 16s;
+  --bubble-delay: -4s;
+  --bubble-opacity: 0.72;
+}
+
+.checkout-bubbles span:nth-child(2) {
+  --bubble-size: 152px;
+  --bubble-left: 15%;
+  --bubble-duration: 21s;
+  --bubble-delay: -17s;
+  --bubble-opacity: 0.54;
+}
+
+.checkout-bubbles span:nth-child(3) {
+  --bubble-size: 62px;
+  --bubble-left: 24%;
+  --bubble-duration: 14s;
+  --bubble-delay: -9s;
+  --bubble-opacity: 0.68;
+}
+
+.checkout-bubbles span:nth-child(4) {
+  --bubble-size: 118px;
+  --bubble-left: 34%;
+  --bubble-duration: 19s;
+  --bubble-delay: -2s;
+  --bubble-opacity: 0.64;
+}
+
+.checkout-bubbles span:nth-child(5) {
+  --bubble-size: 176px;
+  --bubble-left: 47%;
+  --bubble-duration: 24s;
+  --bubble-delay: -21s;
+  --bubble-opacity: 0.48;
+}
+
+.checkout-bubbles span:nth-child(6) {
+  --bubble-size: 78px;
+  --bubble-left: 57%;
+  --bubble-duration: 15s;
+  --bubble-delay: -12s;
+  --bubble-opacity: 0.7;
+}
+
+.checkout-bubbles span:nth-child(7) {
+  --bubble-size: 136px;
+  --bubble-left: 66%;
+  --bubble-duration: 20s;
+  --bubble-delay: -7s;
+  --bubble-opacity: 0.58;
+}
+
+.checkout-bubbles span:nth-child(8) {
+  --bubble-size: 88px;
+  --bubble-left: 76%;
+  --bubble-duration: 17s;
+  --bubble-delay: -15s;
+  --bubble-opacity: 0.7;
+}
+
+.checkout-bubbles span:nth-child(9) {
+  --bubble-size: 190px;
+  --bubble-left: 84%;
+  --bubble-duration: 26s;
+  --bubble-delay: -25s;
+  --bubble-opacity: 0.46;
+}
+
+.checkout-bubbles span:nth-child(10) {
+  --bubble-size: 58px;
+  --bubble-left: 91%;
+  --bubble-duration: 13s;
+  --bubble-delay: -5s;
+  --bubble-opacity: 0.76;
+}
+
+.checkout-bubbles span:nth-child(11) {
+  --bubble-size: 110px;
+  --bubble-left: 3%;
+  --bubble-duration: 18s;
+  --bubble-delay: -23s;
+  --bubble-opacity: 0.58;
+}
+
+.checkout-bubbles span:nth-child(12) {
+  --bubble-size: 72px;
+  --bubble-left: 72%;
+  --bubble-duration: 14s;
+  --bubble-delay: -1s;
+  --bubble-opacity: 0.72;
+}
+
+@keyframes bubble-float {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.92);
+  }
+
+  25% {
+    transform: translate3d(44px, -30vh, 0) scale(1.04);
+  }
+
+  55% {
+    transform: translate3d(-38px, -62vh, 0) scale(1.1);
+  }
+
+  78% {
+    transform: translate3d(30px, -88vh, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(-18px, calc(-100vh - 260px), 0) scale(0.94);
+  }
+}
+
+@keyframes bubble-pulse {
+  0%,
+  100% {
+    filter: saturate(1) brightness(1);
+  }
+
+  50% {
+    filter: saturate(1.25) brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-bubbles span {
+    animation: none;
+    transform: translateY(-22vh);
+  }
+}
+
+.checkout-image {
+  border-radius: 24px;
+}
+
+.checkout-panel,
+.checkout-done {
+  border-radius: 18px;
+}
+
+.checkout-step {
+  display: flex;
+  min-width: 0;
+  height: 58px;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid rgba(121, 215, 240, 0.68);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #5f7f92;
+  padding: 0 14px;
+}
+
+.checkout-step span {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e8f9ff;
+  color: #2f9ecd;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.checkout-step strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkout-step-active {
+  border-color: #79d7f0;
+  background: #e8f9ff;
+  color: #2f9ecd;
+}
+
+.checkout-fact {
+  border: 2px solid rgba(121, 215, 240, 0.34);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px;
+}
+
+.checkout-fact span,
+.checkout-label span {
+  display: block;
+  color: #5f7f92;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.checkout-fact strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #21485d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.checkout-label input,
+.checkout-label textarea {
+  width: 100%;
+  margin-top: 8px;
+  border: 2px solid #c9edf8;
+  border-radius: 8px;
+  background: #f7fcfe;
+  color: #21485d;
+  font-weight: 800;
+  outline: none;
+  padding: 12px 14px;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+.checkout-label input:focus,
+.checkout-label textarea:focus {
+  border-color: #79d7f0;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(121, 215, 240, 0.2);
+}
+
+.checkout-card-fields {
+  border: 2px solid rgba(121, 215, 240, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 14px;
+}
+
+.checkout-quantity-input {
+  width: 64px;
+  height: 100%;
+  border: 0;
+  border-inline: 1px solid rgba(121, 215, 240, 0.44);
+  background: white;
+  color: #21485d;
+  font-size: 18px;
+  font-weight: 900;
+  outline: none;
+  text-align: center;
+}
+
+.checkout-quantity-input:focus {
+  background: #f7fcfe;
+  box-shadow: inset 0 0 0 3px rgba(121, 215, 240, 0.2);
+}
+
+.checkout-quantity-input::-webkit-inner-spin-button,
+.checkout-quantity-input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.checkout-back-link {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #2f9ecd;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 0;
+  transition:
+    color 0.24s ease,
+    transform 0.24s ease;
+}
+
+.checkout-back-link:hover {
+  color: #21485d;
+  transform: translateX(-3px);
+}
+
+.checkout-security-note {
+  color: #5f7f92;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.7;
+}
+
+.payment-option {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 12px;
+  border: 2px solid #c9edf8;
+  border-radius: 8px;
+  background: #f7fcfe;
+  color: #21485d;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 14px;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    color 0.24s ease;
+}
+
+.payment-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: #5fb8d7;
+}
+
+.payment-option-active {
+  border-color: #79d7f0;
+  background: #e8f9ff;
+  color: #2f9ecd;
+}
+
+.checkout-primary,
+.checkout-secondary {
+  display: inline-flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    color 0.24s ease,
+    transform 0.24s ease,
+    opacity 0.24s ease;
+}
+
+.checkout-primary {
+  background: #5fb8d7;
+  color: white;
+  box-shadow: 0 12px 24px rgba(79, 176, 207, 0.28);
+}
+
+.checkout-primary:hover:not(:disabled) {
+  background: #4fb0cf;
+  box-shadow: 0 16px 30px rgba(79, 176, 207, 0.36);
+  transform: translateY(-1px);
+}
+
+.checkout-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.checkout-secondary {
+  border: 2px solid #c9edf8;
+  background: white;
+  color: #2f9ecd;
+}
+
+.checkout-secondary:hover {
+  border-color: #79d7f0;
+  background: #e8f9ff;
+}
+
+.checkout-panel .checkout-secondary:not(.checkout-bottom-back) {
+  display: none;
+}
+
+.checkout-panel .checkout-primary {
+  grid-column: 1 / -1;
+}
+
+.checkout-close:focus-visible,
+.checkout-primary:focus-visible,
+.checkout-secondary:focus-visible,
+.payment-option:focus-within {
+  outline: 4px solid rgba(121, 215, 240, 0.28);
+  outline-offset: 3px;
+}
+
 @media (max-width: 640px) {
   .catalog-accent {
     gap: 12px;
@@ -523,6 +1446,16 @@ onBeforeUnmount(() => {
   .catalog-accent::before,
   .catalog-accent::after,
   .catalog-accent-line {
+    display: none;
+  }
+
+  .checkout-step {
+    height: 50px;
+    justify-content: center;
+    padding: 0 8px;
+  }
+
+  .checkout-step strong {
     display: none;
   }
 }
