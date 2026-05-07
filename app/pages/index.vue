@@ -12,7 +12,11 @@ const heroItems = [
   { image: '/images/sy4.jpg', thumb: '/images/tx4.jpg', showTitle: false },
   { image: '/images/sy5.jpg', thumb: '/images/tx5.jpg', showTitle: false }
 ]
-const introVisible = ref(true)
+
+const HOME_INTRO_PLAYED_KEY = 'atriHomeIntroPlayed'
+const SKIP_HOME_INTRO_KEY = 'atriSkipHomeIntroOnce'
+
+const introVisible = ref(false)
 const showVideo = ref(false)
 const introFinished = ref(false)
 const introScreen = ref(null)
@@ -36,6 +40,49 @@ let playCall
 let finishTween
 let slideTween
 let introPointer = { x: 0, y: 0 }
+
+function getSessionItem(key) {
+  try {
+    return sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function setSessionItem(key, value) {
+  try {
+    sessionStorage.setItem(key, value)
+  } catch {
+    // Storage can fail in private contexts. The page still works without it.
+  }
+}
+
+function removeSessionItem(key) {
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    // Storage can fail in private contexts. The page still works without it.
+  }
+}
+
+function getNavigationType() {
+  const navigationEntry = performance.getEntriesByType('navigation')?.[0]
+  return navigationEntry?.type || 'navigate'
+}
+
+function shouldPlayHomeIntro() {
+  if (getNavigationType() === 'reload') {
+    removeSessionItem(SKIP_HOME_INTRO_KEY)
+    return true
+  }
+
+  if (getSessionItem(SKIP_HOME_INTRO_KEY) === '1') {
+    removeSessionItem(SKIP_HOME_INTRO_KEY)
+    return false
+  }
+
+  return getSessionItem(HOME_INTRO_PLAYED_KEY) !== '1'
+}
 
 function setThumbButtonRef(element, index) {
   if (element) thumbButtons.value[index] = element
@@ -67,6 +114,7 @@ function syncThumbButtons() {
 function enterHome() {
   if (introFinished.value) return
 
+  setSessionItem(HOME_INTRO_PLAYED_KEY, '1')
   introFinished.value = true
   openingVideo.value?.pause()
   introTimeline?.kill()
@@ -178,75 +226,83 @@ async function selectHero(index) {
     }, 0)
 }
 
-onMounted(() => {
+onMounted(async () => {
   introPointer = {
     x: window.innerWidth / 2,
     y: window.innerHeight / 2
   }
 
   gsap.set(heroVisual.value, { '--move-x': '0px', '--move-y': '0px' })
-  gsap.set(introClickCursor.value, introPointer)
-  gsap.set(introVideoLayer.value, { opacity: 0 })
-  gsap.set(introCard.value, { yPercent: 100 })
-  gsap.set(introTitle.value, {
-    xPercent: -50,
-    yPercent: -45,
-    opacity: 0,
-    backgroundPosition: '100% 0'
-  })
 
-  introTimeline = gsap.timeline()
+  if (shouldPlayHomeIntro()) {
+    setSessionItem(HOME_INTRO_PLAYED_KEY, '1')
+    introVisible.value = true
 
-  introTimeline
-    .to(introCard.value, {
-      yPercent: 0,
-      duration: 1.2,
-      ease: 'power4.out'
-    })
-    .to(introTitle.value, {
-      opacity: 1,
-      yPercent: -50,
-      duration: 0.7,
-      ease: 'power1.out'
-    }, 0.9)
-    .to(introTitle.value, {
-      backgroundPosition: '0% 0',
-      duration: 1.1,
-      ease: 'power1.inOut'
-    }, 1.25)
-    .to(introTitle.value, {
-      opacity: 0,
-      duration: 0.4,
-      ease: 'power1.out'
-    }, 2.8)
-    .to(introCard.value, {
-      yPercent: -100,
-      duration: 0.9,
-      ease: 'power2.inOut'
-    }, 3)
+    await nextTick()
 
-  videoCall = gsap.delayedCall(3, () => {
-    showVideo.value = true
     gsap.set(introClickCursor.value, introPointer)
-    gsap.fromTo(introClickCursor.value, {
-      autoAlpha: 0,
-      scale: 0.8
-    }, {
-      autoAlpha: 1,
-      scale: 1,
-      duration: 0.28,
-      ease: 'power2.out'
+    gsap.set(introVideoLayer.value, { opacity: 0 })
+    gsap.set(introCard.value, { yPercent: 100 })
+    gsap.set(introTitle.value, {
+      xPercent: -50,
+      yPercent: -45,
+      opacity: 0,
+      backgroundPosition: '100% 0'
     })
-    gsap.to(introVideoLayer.value, {
-      opacity: 1,
-      duration: 0.2,
-      ease: 'power1.out'
-    })
-  })
 
-  playCall = gsap.delayedCall(3.9, () => {
-    openingVideo.value?.play().catch(() => {})
-  })
+    introTimeline = gsap.timeline()
+
+    introTimeline
+      .to(introCard.value, {
+        yPercent: 0,
+        duration: 1.2,
+        ease: 'power4.out'
+      })
+      .to(introTitle.value, {
+        opacity: 1,
+        yPercent: -50,
+        duration: 0.7,
+        ease: 'power1.out'
+      }, 0.9)
+      .to(introTitle.value, {
+        backgroundPosition: '0% 0',
+        duration: 1.1,
+        ease: 'power1.inOut'
+      }, 1.25)
+      .to(introTitle.value, {
+        opacity: 0,
+        duration: 0.4,
+        ease: 'power1.out'
+      }, 2.8)
+      .to(introCard.value, {
+        yPercent: -100,
+        duration: 0.9,
+        ease: 'power2.inOut'
+      }, 3)
+
+    videoCall = gsap.delayedCall(3, () => {
+      showVideo.value = true
+      gsap.set(introClickCursor.value, introPointer)
+      gsap.fromTo(introClickCursor.value, {
+        autoAlpha: 0,
+        scale: 0.8
+      }, {
+        autoAlpha: 1,
+        scale: 1,
+        duration: 0.28,
+        ease: 'power2.out'
+      })
+      gsap.to(introVideoLayer.value, {
+        opacity: 1,
+        duration: 0.2,
+        ease: 'power1.out'
+      })
+    })
+
+    playCall = gsap.delayedCall(3.9, () => {
+      openingVideo.value?.play().catch(() => {})
+    })
+  }
 
   heroItems.forEach((item) => {
     const image = new Image()
