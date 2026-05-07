@@ -1,21 +1,29 @@
-// server/api/merchandise.get.ts
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
 
-const prisma = new PrismaClient()
+const connectionString = process.env.DATABASE_URL
 
-export default defineEventHandler(async (event) => {
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not set')
+}
+
+const prisma = connectionString.startsWith('prisma+postgres://')
+  ? new PrismaClient({ accelerateUrl: connectionString })
+  : new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
+
+export default defineEventHandler(async () => {
   try {
-    // 冷静理智地从数据库抓取所有商品，并按创建时间排序
-    const products = await prisma.merchandise.findMany({
+    return await prisma.merchandise.findMany({
       orderBy: {
         createdAt: 'asc'
       }
     })
-    return products
   } catch (error) {
+    console.error(error)
+
     throw createError({
       statusCode: 500,
-      statusMessage: '数据库连接失败',
+      statusMessage: 'Failed to load merchandise data'
     })
   }
 })

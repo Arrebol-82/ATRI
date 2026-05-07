@@ -13,92 +13,8 @@ const router = useRouter()
 
 let navTimeline
 
-const products = [
-  {
-    id: 1,
-    category: 'Blu-ray',
-    title: 'Blu-ray Limited Edition Vol.4',
-    price: 'JPY 14,000 + tax',
-    image: '/images/merchandise/ph_amiami.jpg'
-  },
-  {
-    id: 2,
-    category: 'GOODS',
-    title: 'Acrylic Panel / Next Shine Key Visual Ver.',
-    price: 'JPY 3,300 tax included',
-    image: '/images/merchandise/ph_animate_1.jpg'
-  },
-  {
-    id: 3,
-    category: 'GOODS',
-    title: 'Clear File / Next Shine Key Visual Ver.',
-    price: 'JPY 500 tax included',
-    image: '/images/merchandise/ph_animega_2.jpg'
-  },
-  {
-    id: 4,
-    category: 'GOODS',
-    title: 'Canvas Board / Summer Memory Ver.',
-    price: 'JPY 2,800 tax included',
-    image: '/images/merchandise/ph_aniplex_2.jpg'
-  },
-  {
-    id: 5,
-    category: 'GOODS',
-    title: 'Acrylic Stand / ATRI Casual Ver.',
-    price: 'JPY 1,650 tax included',
-    image: '/images/merchandise/ph_gamers_2.jpg'
-  },
-  {
-    id: 6,
-    category: 'GOODS',
-    title: 'Trading Badge Collection',
-    price: 'JPY 550 tax included',
-    image: '/images/merchandise/ph_joshin.jpg'
-  },
-  {
-    id: 7,
-    category: 'Blu-ray',
-    title: 'Blu-ray Limited Edition Vol.1',
-    price: 'JPY 14,000 + tax',
-    image: '/images/merchandise/ph_melonbooks.jpg'
-  },
-  {
-    id: 8,
-    category: 'Blu-ray',
-    title: 'Blu-ray Limited Edition Vol.2',
-    price: 'JPY 14,000 + tax',
-    image: '/images/merchandise/ph_rakuten_1.jpg'
-  },
-  {
-    id: 9,
-    category: 'Blu-ray',
-    title: 'Blu-ray Limited Edition Vol.3',
-    price: 'JPY 14,000 + tax',
-    image: '/images/merchandise/ph_seven.jpg'
-  },
-  {
-    id: 10,
-    category: 'GOODS',
-    title: 'Mini Towel / Blue Memory Ver.',
-    price: 'JPY 880 tax included',
-    image: '/images/merchandise/ph_toranoana.jpg'
-  },
-  {
-    id: 11,
-    category: 'GOODS',
-    title: 'Postcard Set / Scene Collection',
-    price: 'JPY 770 tax included',
-    image: '/images/merchandise/ph_tsutaya_1.jpg'
-  },
-  {
-    id: 12,
-    category: 'GOODS',
-    title: 'Key Holder / Logo Ver.',
-    price: 'JPY 990 tax included',
-    image: '/images/merchandise/key-holder.png'
-  }
-]
+const { data: products, pending, error } = await useFetch('/api/merchandise')
+
 
 function goBack() {
   if (import.meta.client) {
@@ -280,15 +196,24 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div v-if="pending" class="col-span-full py-20 text-center font-bold text-[#4fb0cf]">
+          正在连接数据库...
+        </div>
+
+        <div v-else-if="error" class="col-span-full py-20 text-center font-bold text-[#d45b6a]">
+          商品数据加载失败
+        </div>
+
         <article
+          v-else
           v-for="product in products"
           :key="product.id"
           class="product-card flex min-h-[430px] flex-col rounded-[14px] border-2 border-b-[6px] border-l-[6px] border-[#d3eef4] bg-white p-6 shadow-[0_4px_14px_rgba(91,174,201,0.08)]"
         >
           <div class="flex aspect-square items-center justify-center overflow-hidden rounded-[9px] border-2 border-[#dff2f6] bg-[#f7fcfe] p-3">
             <img
-              :src="product.image"
-              :alt="product.title"
+              :src="product.imageUrl"
+              :alt="product.name"
               class="h-full w-full object-contain"
               loading="lazy"
             >
@@ -301,11 +226,11 @@ onBeforeUnmount(() => {
             </div>
 
             <h2 class="mt-3 min-h-[88px] text-[17px] font-black leading-[1.65] text-[#102a3a]">
-              {{ product.title }}
+              {{ product.name }}
             </h2>
 
             <p class="mt-auto pt-5 text-sm font-bold tracking-[0.02em] text-[#102a3a]">
-              {{ product.price }}
+              {{ product.priceDisplay }}
             </p>
           </div>
         </article>
