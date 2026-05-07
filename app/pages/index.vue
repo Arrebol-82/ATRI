@@ -73,11 +73,13 @@ function getNavigationType() {
 function shouldPlayHomeIntro() {
   if (getNavigationType() === 'reload') {
     removeSessionItem(SKIP_HOME_INTRO_KEY)
+    removeSessionItem('atriSkipIntro')
     return true
   }
 
-  if (getSessionItem(SKIP_HOME_INTRO_KEY) === '1') {
+  if (getSessionItem(SKIP_HOME_INTRO_KEY) === '1' || getSessionItem('atriSkipIntro') === '1') {
     removeSessionItem(SKIP_HOME_INTRO_KEY)
+    removeSessionItem('atriSkipIntro')
     return false
   }
 
