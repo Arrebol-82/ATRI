@@ -1,8 +1,10 @@
 ﻿<script setup>
 import { gsap } from 'gsap'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import CharactersSection from '~/components/CharactersSection.vue'
 import HomeSidebar from '~/components/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
+import ScenesSection from './scenes.vue'
 import StorySection from './story.vue'
 
 const heroItems = [
@@ -437,6 +439,14 @@ onBeforeUnmount(() => {
 
     <section id="story">
       <StorySection />
+    </section>
+
+    <section id="characters">
+      <CharactersSection />
+    </section>
+
+    <section id="scenes">
+      <ScenesSection />
     </section>
   </main>
 </template>

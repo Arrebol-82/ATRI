@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
     
     <div class="absolute inset-0 z-10 bg-white/50 backdrop-blur-[2px]"></div>
 
-    <div class="absolute right-8 top-8 z-30 flex flex-col items-center">
+    <div class="fixed right-8 top-8 z-[80] flex flex-col items-center">
       <button
         v-if="!isSidebarOpen"
         type="button"
@@ -150,7 +150,7 @@ onBeforeUnmount(() => {
 
     <div
       v-if="isSidebarOpen"
-      class="fixed inset-0 z-50 grid grid-cols-[1fr_320px]"
+      class="fixed inset-0 z-[90] grid grid-cols-[1fr_320px]"
     >
       <button
         ref="navBackdrop"
