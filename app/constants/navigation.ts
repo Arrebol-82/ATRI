@@ -1,4 +1,10 @@
-export const homeNavItems = [
+export type HomeNavItem = {
+  label: string
+  text: string
+  to: string
+}
+
+export const homeNavItems: HomeNavItem[] = [
   { label: 'HOME', text: '首页', to: '/' },
   { label: 'STORY', text: '故事鉴赏', to: '/#story' },
   { label: 'CHARACTER', text: '人物鉴赏', to: '/#characters' },
