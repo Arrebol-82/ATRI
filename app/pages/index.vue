@@ -74,10 +74,16 @@ function getNavigationType() {
 }
 
 function shouldPlayHomeIntro() {
-  if (getNavigationType() === 'reload') {
+  const navType = getNavigationType()
+  
+  if (navType === 'reload') {
     removeSessionItem(SKIP_HOME_INTRO_KEY)
     removeSessionItem('atriSkipIntro')
     return true
+  }
+
+  if (navType === 'back_forward') {
+    return false
   }
 
   if (getSessionItem(SKIP_HOME_INTRO_KEY) === '1' || getSessionItem('atriSkipIntro') === '1') {
@@ -307,6 +313,16 @@ onMounted(async () => {
     playCall = gsap.delayedCall(3.9, () => {
       openingVideo.value?.play().catch(() => {})
     })
+  } else {
+    if (getSessionItem('scrollToNews') === '1') {
+      removeSessionItem('scrollToNews')
+      setTimeout(() => {
+        const newsSection = document.getElementById('news')
+        if (newsSection) {
+          newsSection.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 500)
+    }
   }
 
   heroItems.forEach((item) => {
@@ -451,7 +467,7 @@ onBeforeUnmount(() => {
     </section>
 
     <section id="news">
-      <NewsSection />
+      <NewsSection :showFullPage="false" />
     </section>
   </main>
 </template>

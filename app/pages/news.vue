@@ -1,12 +1,10 @@
 <template>
-  <section class="relative min-h-screen overflow-hidden bg-white text-[#24424b]">
+  <section class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]">
     <!-- 背景装饰 -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute left-[10%] top-16 h-40 w-[520px] rounded-full bg-sky-100/70 blur-3xl"></div>
-      <div class="absolute right-[-170px] top-[-120px] h-[420px] w-[420px] rounded-full border border-sky-100"></div>
-      <div class="absolute right-[-80px] top-8 h-[280px] w-[280px] rounded-full border border-sky-50"></div>
-      <div class="absolute left-0 bottom-12 h-px w-[520px] rotate-[-25deg] bg-gradient-to-r from-transparent via-sky-200 to-transparent"></div>
-      <div class="absolute right-0 bottom-24 h-px w-[460px] rotate-[-18deg] bg-gradient-to-r from-transparent via-sky-200 to-transparent"></div>
+      <div class="absolute left-[8%] top-20 h-[320px] w-[320px] rounded-full bg-sky-100/60 blur-3xl"></div>
+      <div class="absolute right-[5%] top-[30%] h-[280px] w-[280px] rounded-full bg-sky-50/80 blur-3xl"></div>
+      <div class="absolute left-[20%] bottom-20 h-[200px] w-[200px] rounded-full border border-sky-100/50"></div>
     </div>
 
     <!-- 新闻详情弹窗 -->
@@ -36,13 +34,24 @@
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
-            <button
-              class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
-              aria-label="Close news detail"
-              @click="closeNewsDetail"
-            >
-              x
-            </button>
+            <div class="mb-6 flex items-center justify-between">
+              <button
+                class="flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
+                @click="closeNewsDetail"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>BACK</span>
+              </button>
+              <button
+                class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
+                aria-label="Close news detail"
+                @click="closeNewsDetail"
+              >
+                x
+              </button>
+            </div>
 
             <time class="block text-xl font-bold tracking-[0.08em] text-sky-500">
               {{ selectedNews.date }}
@@ -103,55 +112,98 @@
     <div class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24">
       <!-- 标题 -->
       <header class="mb-14">
-        <div class="flex items-end gap-6">
-          <h1 class="text-6xl font-black uppercase tracking-[0.04em] text-sky-400 md:text-8xl">
-            NEWS
-          </h1>
-          <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
-            ニュース
-          </p>
+        <div class="flex items-center justify-between">
+          <div class="flex items-end gap-6">
+            <h1 class="text-6xl font-black uppercase tracking-[0.04em] text-sky-400 md:text-8xl">
+              NEWS
+            </h1>
+            <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
+              ニュース
+            </p>
+          </div>
+
+          <button
+            v-if="showFullPage"
+            class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
+            @click="goBack"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>BACK</span>
+          </button>
         </div>
       </header>
 
       <!-- 新闻列表页 -->
       <main>
-        <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <article
-            v-for="item in newsList"
+            v-for="(item, index) in displayedNews"
             :key="item.id"
-            class="group cursor-pointer rounded-2xl border-2 border-sky-200 bg-white/90 p-5 shadow-[0_10px_30px_rgba(56,189,248,0.08)] transition duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-[0_16px_40px_rgba(56,189,248,0.18)]"
+            class="group cursor-pointer rounded-xl border-2 border-sky-300 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400 hover:shadow-lg"
+            :class="{ 'news-card-expand': showAllNews && index >= 3 }"
+            :style="{ animationDelay: `${(index - 2) * 0.1}s` }"
             @click="openNewsDetail(item)"
           >
-            <!-- 图片占位：以后有图片了，把这里换成 img -->
-            <div class="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl" :class="item.bgClass">
-              <div class="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,.15),transparent_45%,rgba(255,255,255,.45))]"></div>
-              <div class="absolute left-6 top-6 rounded-full bg-white/50 px-4 py-1 text-xs font-bold tracking-[0.18em] text-sky-500">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-lg">
+              <img
+                :src="`https://picsum.photos/seed/news${item.id}/800/450`"
+                :alt="item.title"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div class="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold tracking-[0.15em] text-sky-500 shadow-sm">
                 NEWS
-              </div>
-              <div class="absolute bottom-5 left-6 h-8 w-36 rounded-full bg-white/30 blur-md"></div>
-              <div class="absolute right-5 top-5 h-12 w-12 rounded-full border border-white/70"></div>
-              <div class="absolute bottom-5 right-5 text-[10px] font-bold tracking-[0.25em] text-white/90">
-                ATRI
               </div>
             </div>
 
-            <time class="block text-xl font-bold tracking-[0.06em] text-sky-500">
+            <time class="mt-4 block text-lg font-bold tracking-[0.08em] text-sky-500">
               {{ item.date }}
             </time>
 
-            <h2 class="mt-4 min-h-[72px] text-[17px] font-bold leading-8 tracking-[0.06em] text-[#263f48]">
+            <h2 class="mt-3 line-clamp-2 text-sm font-bold leading-6 tracking-[0.04em] text-[#263f48]">
               {{ item.title }}
             </h2>
           </article>
         </div>
 
-        <!-- 分页装饰 -->
-        <div class="mt-16 flex items-center justify-center gap-4 text-lg font-bold text-sky-400">
-          <button class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 text-white">1</button>
-          <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">2</button>
-          <span>...</span>
-          <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">10</button>
-          <button class="ml-2 rounded-full border border-sky-300 px-5 py-2 text-sm tracking-[0.2em] hover:bg-sky-50">NEXT</button>
+        <!-- MORE按钮 -->
+        <div class="mt-14 flex justify-center">
+          <NuxtLink
+            v-if="!showAllNews && !props.showFullPage"
+            to="/news"
+            class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          >
+            <span>MORE</span>
+            <span class="group-hover:translate-x-1 transition-transform">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </NuxtLink>
+
+          <button
+            v-else-if="!showAllNews"
+            class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            :disabled="isExpanding"
+            @click="handleExpand"
+          >
+            <span>MORE</span>
+            <span class="group-hover:translate-x-1 transition-transform" :class="{ 'animate-pulse': isExpanding }">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </button>
+
+          <!-- 展开后的分页装饰 -->
+          <div v-else class="flex items-center justify-center gap-4 text-lg font-bold text-sky-400 animate-fade-in">
+            <button class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 text-white">1</button>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">2</button>
+            <span>...</span>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">10</button>
+            <button class="ml-2 rounded-full border border-sky-300 px-5 py-2 text-sm tracking-[0.2em] hover:bg-sky-50">NEXT</button>
+          </div>
         </div>
       </main>
     </div>
@@ -159,9 +211,41 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+
+const props = defineProps({
+  showFullPage: {
+    type: Boolean,
+    default: true
+  }
+})
 
 const selectedNews = ref(null)
+const showAllNews = ref(props.showFullPage)
+const isExpanding = ref(false)
+
+const displayedNews = computed(() => {
+  if (showAllNews.value) {
+    return newsList
+  }
+  return newsList.slice(0, 3)
+})
+
+function handleExpand() {
+  if (props.showFullPage) {
+    isExpanding.value = true
+    setTimeout(() => {
+      showAllNews.value = true
+      setTimeout(() => {
+        isExpanding.value = false
+      }, 500)
+    }, 100)
+  }
+}
+
+function goBack() {
+  selectedNews.value = null
+}
 
 const newsList = [
   {
@@ -472,6 +556,43 @@ function closeNewsDetail() {
   .news-detail-bubbles span {
     animation: none;
     transform: translateY(-22vh);
+  }
+}
+
+.news-card-expand {
+  animation: news-card-pop 0.5s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
+@keyframes news-card-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: news-fade-in 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes news-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
