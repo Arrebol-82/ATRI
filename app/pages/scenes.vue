@@ -41,7 +41,10 @@
         <h1 class="font-mono text-5xl font-light tracking-[0.45em] md:text-7xl">
           gallery
         </h1>
+        <p class="mt-3 text-xl tracking-[0.35em]">GALLERY</p>
+        <!--
         <p class="mt-3 text-xl tracking-[0.35em]">ギャラリー</p>
+        -->
       </header>
 
       <!-- 顶部缩略图轮播 -->
@@ -65,7 +68,7 @@
           <div
             ref="thumbnailScroller"
             class="scene-carousel flex gap-9 overflow-x-auto pb-7 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            :class="{ 'is-dragging': isDragging }"
+            :class="{ 'is-dragging': isDragging, 'is-gliding': isGliding }"
             @pointerdown="startThumbnailDrag"
             @pointerleave="stopThumbnailDrag"
             @pointermove="moveThumbnailDrag"
@@ -174,6 +177,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 const activeIndex = ref(2)
 const thumbnailScroller = ref(null)
 const isDragging = ref(false)
+const isGliding = ref(false)
 const shouldSuppressClick = ref(false)
 
 let dragStartX = 0
@@ -182,10 +186,12 @@ let dragMoved = false
 let dragPointerId = null
 let dragAnimationId = 0
 let inertiaAnimationId = 0
+let scrollSyncAnimationId = 0
 let lastPointerX = 0
 let lastPointerTime = 0
 let dragVelocity = 0
 let targetScrollLeft = 0
+let loopWidthCache = 0
 
 const dragEase = 0.36
 const inertiaFriction = 0.94
@@ -308,14 +314,14 @@ function selectScene(index) {
   nextTick(centerActiveThumbnail)
 }
 
-function centerActiveThumbnail() {
+function centerActiveThumbnail(behavior = 'smooth') {
   const scroller = thumbnailScroller.value
   const activeThumb = scroller?.querySelectorAll('.gallery-thumb')?.[
     scenes.length * loopMiddleCopy + activeIndex.value
   ]
 
   activeThumb?.scrollIntoView({
-    behavior: isDragging.value ? 'auto' : 'smooth',
+    behavior: isDragging.value || isGliding.value ? 'auto' : behavior,
     block: 'nearest',
     inline: 'center'
   })
@@ -328,11 +334,15 @@ function handleSceneClick(index) {
 }
 
 function getLoopWidth(scroller) {
+  if (loopWidthCache) return loopWidthCache
+
   const thumbs = scroller?.querySelectorAll('.gallery-thumb')
 
   if (!thumbs || thumbs.length <= scenes.length) return 0
 
-  return thumbs[scenes.length].offsetLeft - thumbs[0].offsetLeft
+  loopWidthCache = thumbs[scenes.length].offsetLeft - thumbs[0].offsetLeft
+
+  return loopWidthCache
 }
 
 function syncLoopScroll(scroller) {
@@ -360,10 +370,23 @@ function syncLoopScroll(scroller) {
 }
 
 function syncThumbnailLoop() {
-  const scroller = thumbnailScroller.value
-  if (!scroller) return
+  if (isDragging.value || isGliding.value || scrollSyncAnimationId) return
 
-  syncLoopScroll(scroller)
+  scrollSyncAnimationId = requestAnimationFrame(() => {
+    scrollSyncAnimationId = 0
+
+    const scroller = thumbnailScroller.value
+    if (!scroller) return
+
+    syncLoopScroll(scroller)
+  })
+}
+
+function stopScrollSync() {
+  if (!scrollSyncAnimationId) return
+
+  cancelAnimationFrame(scrollSyncAnimationId)
+  scrollSyncAnimationId = 0
 }
 
 function stopDragAnimation() {
@@ -374,10 +397,14 @@ function stopDragAnimation() {
 }
 
 function stopInertia() {
-  if (!inertiaAnimationId) return
+  if (!inertiaAnimationId) {
+    isGliding.value = false
+    return
+  }
 
   cancelAnimationFrame(inertiaAnimationId)
   inertiaAnimationId = 0
+  isGliding.value = false
 }
 
 function animateDragScroll() {
@@ -395,7 +422,12 @@ function animateDragScroll() {
 
 function startInertia() {
   const scroller = thumbnailScroller.value
-  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) return
+  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) {
+    isGliding.value = false
+    return
+  }
+
+  isGliding.value = true
 
   const step = () => {
     scroller.scrollLeft += dragVelocity * 16
@@ -404,6 +436,7 @@ function startInertia() {
 
     if (Math.abs(dragVelocity) < minInertiaVelocity) {
       inertiaAnimationId = 0
+      isGliding.value = false
       return
     }
 
@@ -419,6 +452,7 @@ function startThumbnailDrag(event) {
 
   stopInertia()
   stopDragAnimation()
+  stopScrollSync()
   isDragging.value = true
   dragMoved = false
   shouldSuppressClick.value = false
@@ -486,12 +520,13 @@ function nextScene() {
 }
 
 onMounted(() => {
-  nextTick(centerActiveThumbnail)
+  nextTick(() => centerActiveThumbnail('auto'))
 })
 
 onUnmounted(() => {
   stopDragAnimation()
   stopInertia()
+  stopScrollSync()
 })
 </script>
 
@@ -562,13 +597,15 @@ onUnmounted(() => {
   border-right-width: 2px;
 }
 
-.scene-carousel.is-dragging {
+.scene-carousel.is-dragging,
+.scene-carousel.is-gliding {
   cursor: grabbing;
   scroll-behavior: auto;
   scroll-snap-type: none;
 }
 
-.scene-carousel.is-dragging button {
+.scene-carousel.is-dragging button,
+.scene-carousel.is-gliding button {
   pointer-events: none;
 }
 
