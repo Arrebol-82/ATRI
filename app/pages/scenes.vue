@@ -73,18 +73,22 @@
             @pointerleave="stopThumbnailDrag"
             @pointermove="moveThumbnailDrag"
             @pointerup="stopThumbnailDrag"
+            @pointercancel="stopThumbnailDrag"
+            @scroll="handleCarouselScroll"
           >
             <button
-            v-for="(scene, index) in scenes"
-            :key="scene.id"
-            class="gallery-thumb group relative shrink-0"
-            @click="handleSceneClick(index)"
-          >
+              v-for="scene in loopedScenes"
+              :key="scene.renderId"
+              :data-real-index="scene.realIndex"
+              :data-loop-index="scene.loopIndex"
+              class="gallery-thumb group relative shrink-0"
+              @click="handleSceneClick(scene.realIndex)"
+            >
             <!-- 四角框线 -->
-            <span class="corner corner-tl" :class="activeIndex === index ? 'is-active' : ''"></span>
-            <span class="corner corner-tr" :class="activeIndex === index ? 'is-active' : ''"></span>
-            <span class="corner corner-bl" :class="activeIndex === index ? 'is-active' : ''"></span>
-            <span class="corner corner-br" :class="activeIndex === index ? 'is-active' : ''"></span>
+            <span class="corner corner-tl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+            <span class="corner corner-tr" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+            <span class="corner corner-bl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+            <span class="corner corner-br" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
 
             <!-- 缩略图占位 -->
             <div class="gallery-thumb-image overflow-hidden bg-white">
@@ -100,9 +104,9 @@
 
             <div
               class="mx-auto mt-3 h-0 w-0 border-x-[6px] border-b-[10px] border-x-transparent"
-              :class="activeIndex === index ? 'border-b-cyan-300' : 'border-b-gray-300'"
+              :class="activeIndex === scene.realIndex ? 'border-b-cyan-300' : 'border-b-gray-300'"
             ></div>
-          </button>
+            </button>
           </div>
         </div>
       </section>
@@ -117,15 +121,13 @@
           <span class="absolute -bottom-3 -right-3 h-6 w-6 border-b-2 border-r-2 border-gray-300"></span>
 
           <div class="relative aspect-[16/9] overflow-hidden border border-gray-200 bg-white shadow-sm">
-            <!-- 这里以后换成真实图片即可 -->
-            <div class="absolute inset-0 transition duration-500" :class="activeScene.mainClass"></div>
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.05),rgba(255,255,255,.65)_65%,rgba(255,255,255,.85))]"></div>
-
-            <!-- 模拟场景内容，不用真实图片 -->
-            <div class="absolute left-[18%] top-[22%] h-40 w-40 rounded-full bg-white/35 blur-2xl"></div>
-            <div class="absolute left-[22%] top-[32%] h-52 w-44 rounded-t-full border border-white/60 bg-white/25"></div>
-            <div class="absolute left-[34%] top-[28%] h-44 w-72 rounded-full border-t-2 border-white/70"></div>
-            <div class="absolute bottom-0 left-0 h-32 w-full bg-white/20 blur-xl"></div>
+            <img
+              :key="activeScene.id"
+              :src="activeScene.image"
+              :alt="`Scene ${activeScene.id}`"
+              class="scene-main-image block h-full w-full object-cover"
+            >
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.02),rgba(255,255,255,.08)_62%,rgba(255,255,255,.18))]"></div>
 
             <div class="absolute bottom-4 right-5 text-[10px] tracking-[0.25em] text-cyan-500/80">
               © VISUAL ARTS / Key
@@ -183,6 +185,7 @@ let dragMoved = false
 let dragPointerId = null
 let dragAnimationId = 0
 let inertiaAnimationId = 0
+let activationAnimationId = 0
 let lastPointerX = 0
 let lastPointerTime = 0
 let dragVelocity = 0
@@ -191,6 +194,7 @@ let targetScrollLeft = 0
 const dragEase = 0.36
 const inertiaFriction = 0.94
 const minInertiaVelocity = 0.08
+const activeThumbnailSlot = 2
 
 const scenes = [
   {
@@ -291,21 +295,42 @@ const scenes = [
   },
 ]
 
+const loopedScenes = computed(() =>
+  [-1, 0, 1].flatMap((loopIndex) =>
+    scenes.map((scene, realIndex) => ({
+      ...scene,
+      realIndex,
+      loopIndex,
+      renderId: `${loopIndex}-${scene.id}`,
+    }))
+  )
+)
+
 const activeScene = computed(() => scenes[activeIndex.value])
 
 function selectScene(index) {
   activeIndex.value = index
-  nextTick(centerActiveThumbnail)
+  nextTick(alignActiveThumbnailToSlot)
 }
 
-function centerActiveThumbnail() {
+function alignActiveThumbnailToSlot(behavior = isDragging.value ? 'auto' : 'smooth') {
   const scroller = thumbnailScroller.value
-  const activeThumb = scroller?.querySelectorAll('.gallery-thumb')?.[activeIndex.value]
+  const activeThumb = scroller?.querySelector(
+    `.gallery-thumb[data-real-index="${activeIndex.value}"][data-loop-index="0"]`
+  )
 
-  activeThumb?.scrollIntoView({
-    behavior: isDragging.value ? 'auto' : 'smooth',
-    block: 'nearest',
-    inline: 'center'
+  if (!scroller || !activeThumb) {
+    return
+  }
+
+  const gap = parseFloat(getComputedStyle(scroller).columnGap) || 0
+  const scrollerRect = scroller.getBoundingClientRect()
+  const activeThumbRect = activeThumb.getBoundingClientRect()
+  const slotLeft = scrollerRect.left + activeThumbnailSlot * (activeThumb.offsetWidth + gap)
+
+  scroller.scrollTo({
+    left: scroller.scrollLeft + activeThumbRect.left - slotLeft,
+    behavior,
   })
 }
 
@@ -315,10 +340,102 @@ function handleSceneClick(index) {
   selectScene(index)
 }
 
-function clampScrollLeft(scroller, value) {
-  const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
+function getLoopMetrics(scroller) {
+  const firstCloneThumb = scroller?.querySelector('.gallery-thumb[data-loop-index="-1"][data-real-index="0"]')
+  const firstRealThumb = scroller?.querySelector('.gallery-thumb[data-loop-index="0"][data-real-index="0"]')
 
-  return Math.max(0, Math.min(value, maxScrollLeft))
+  if (!firstCloneThumb || !firstRealThumb) {
+    return null
+  }
+
+  const loopWidth = firstRealThumb.offsetLeft - firstCloneThumb.offsetLeft
+
+  if (loopWidth <= 0) {
+    return null
+  }
+
+  const centerOffset = (scroller.clientWidth - firstRealThumb.clientWidth) / 2
+  const firstRealCenterScroll = firstRealThumb.offsetLeft - centerOffset
+
+  return {
+    loopWidth,
+    lowerLimit: firstRealCenterScroll - loopWidth / 2,
+    upperLimit: firstRealCenterScroll + loopWidth * 1.5,
+  }
+}
+
+function normalizeCarouselLoop(syncTarget = false) {
+  const scroller = thumbnailScroller.value
+  const metrics = getLoopMetrics(scroller)
+
+  if (!scroller || !metrics) {
+    return
+  }
+
+  const previousScrollLeft = scroller.scrollLeft
+  let nextScrollLeft = previousScrollLeft
+
+  if (nextScrollLeft < metrics.lowerLimit) {
+    nextScrollLeft += metrics.loopWidth
+  } else if (nextScrollLeft > metrics.upperLimit) {
+    nextScrollLeft -= metrics.loopWidth
+  }
+
+  if (nextScrollLeft === previousScrollLeft) {
+    return
+  }
+
+  scroller.scrollLeft = nextScrollLeft
+
+  if (syncTarget) {
+    targetScrollLeft += nextScrollLeft - previousScrollLeft
+    dragStartScrollLeft += nextScrollLeft - previousScrollLeft
+  }
+}
+
+function updateActiveSceneFromCarousel() {
+  activationAnimationId = 0
+
+  const scroller = thumbnailScroller.value
+
+  if (!scroller) {
+    return
+  }
+
+  const scrollerRect = scroller.getBoundingClientRect()
+  const thumbs = Array.from(scroller.querySelectorAll('.gallery-thumb'))
+    .map((thumb) => {
+      const rect = thumb.getBoundingClientRect()
+      const overlap = Math.min(rect.right, scrollerRect.right) - Math.max(rect.left, scrollerRect.left)
+
+      return {
+        thumb,
+        rect,
+        overlap,
+      }
+    })
+    .filter(({ rect, overlap }) => overlap >= rect.width * 0.45)
+    .sort((a, b) => a.rect.left - b.rect.left)
+
+  const activeThumb = thumbs[Math.min(activeThumbnailSlot, thumbs.length - 1)]
+  const realIndex = Number(activeThumb?.thumb.dataset.realIndex)
+
+  if (Number.isInteger(realIndex) && realIndex !== activeIndex.value) {
+    activeIndex.value = realIndex
+  }
+}
+
+function scheduleActiveSceneFromCarousel() {
+  if (activationAnimationId) {
+    return
+  }
+
+  activationAnimationId = requestAnimationFrame(updateActiveSceneFromCarousel)
+}
+
+function handleCarouselScroll() {
+  normalizeCarouselLoop()
+  scheduleActiveSceneFromCarousel()
 }
 
 function stopDragAnimation() {
@@ -344,6 +461,7 @@ function animateDragScroll() {
   }
 
   scroller.scrollLeft += (targetScrollLeft - scroller.scrollLeft) * dragEase
+  normalizeCarouselLoop(true)
   dragAnimationId = requestAnimationFrame(animateDragScroll)
 }
 
@@ -352,15 +470,13 @@ function startInertia() {
   if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) return
 
   const step = () => {
-    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
-    const nextScrollLeft = clampScrollLeft(scroller, scroller.scrollLeft + dragVelocity * 16)
+    const nextScrollLeft = scroller.scrollLeft + dragVelocity * 16
 
     scroller.scrollLeft = nextScrollLeft
+    normalizeCarouselLoop()
     dragVelocity *= inertiaFriction
 
-    const hitEdge = nextScrollLeft === 0 || nextScrollLeft === maxScrollLeft
-
-    if (Math.abs(dragVelocity) < minInertiaVelocity || hitEdge) {
+    if (Math.abs(dragVelocity) < minInertiaVelocity) {
       inertiaAnimationId = 0
       return
     }
@@ -406,7 +522,7 @@ function moveThumbnailDrag(event) {
     shouldSuppressClick.value = true
   }
 
-  targetScrollLeft = clampScrollLeft(scroller, dragStartScrollLeft - distance)
+  targetScrollLeft = dragStartScrollLeft - distance
   dragVelocity = (lastPointerX - event.clientX) / elapsed
   lastPointerX = event.clientX
   lastPointerTime = now
@@ -419,6 +535,7 @@ function stopThumbnailDrag(event) {
   isDragging.value = false
   stopDragAnimation()
   scroller.scrollLeft = targetScrollLeft
+  normalizeCarouselLoop()
 
   if (dragPointerId !== null) {
     scroller?.releasePointerCapture?.(dragPointerId)
@@ -443,12 +560,21 @@ function nextScene() {
 }
 
 onMounted(() => {
-  nextTick(centerActiveThumbnail)
+  nextTick(() => {
+    alignActiveThumbnailToSlot('auto')
+    scheduleActiveSceneFromCarousel()
+  })
+  window.addEventListener('resize', scheduleActiveSceneFromCarousel)
 })
 
 onUnmounted(() => {
   stopDragAnimation()
   stopInertia()
+  window.removeEventListener('resize', scheduleActiveSceneFromCarousel)
+
+  if (activationAnimationId) {
+    cancelAnimationFrame(activationAnimationId)
+  }
 })
 </script>
 
@@ -476,6 +602,22 @@ onUnmounted(() => {
   position: relative;
   aspect-ratio: 16 / 9;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.scene-main-image {
+  animation: scene-main-fade 0.34s ease both;
+}
+
+@keyframes scene-main-fade {
+  from {
+    opacity: 0.72;
+    transform: scale(1.012);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .corner {
