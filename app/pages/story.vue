@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { gsap } from 'gsap'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import HomeSidebar from '~/components/HomeSidebar.vue'
+import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
 const videoSrc = '/videos/story.mp4'
 const charImageStory1 = '/images/story2.png'

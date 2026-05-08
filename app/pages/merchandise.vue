@@ -2,7 +2,7 @@
 import { gsap } from 'gsap'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import HomeSidebar from '~/components/HomeSidebar.vue'
+import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
 
 const sideCaptionText = 'ATRIMyDearMoments'
