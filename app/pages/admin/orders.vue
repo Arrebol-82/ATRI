@@ -4,6 +4,10 @@ definePageMeta({
 })
 
 const isDark = useState('admin-dark-mode', () => false)
+
+function toggleTheme() {
+  isDark.value = !isDark.value
+}
 </script>
 
 <template>
@@ -14,6 +18,7 @@ const isDark = useState('admin-dark-mode', () => false)
     <AdminHeader
       title="Orders"
       :is-dark="isDark"
+      @toggle-theme="toggleTheme"
     />
 
     <p

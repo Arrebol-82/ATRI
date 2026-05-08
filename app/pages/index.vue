@@ -4,6 +4,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import CharactersSection from '~/components/site/CharactersSection.vue'
 import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
+import NewsSection from './news.vue'
 import ScenesSection from './scenes.vue'
 import StorySection from './story.vue'
 
@@ -447,6 +448,10 @@ onBeforeUnmount(() => {
 
     <section id="scenes">
       <ScenesSection />
+    </section>
+
+    <section id="news">
+      <NewsSection />
     </section>
   </main>
 </template>

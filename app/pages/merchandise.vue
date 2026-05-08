@@ -1,15 +1,10 @@
 <script setup>
-import { gsap } from 'gsap'
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
 
 const sideCaptionText = 'ATRIMyDearMoments'
-const navBackdrop = ref(null)
-const navPanel = ref(null)
-const navCloseButton = ref(null)
-const isSidebarOpen = ref(false)
 const selectedProduct = ref(null)
 const checkoutStep = ref('order')
 const quantity = ref(1)
@@ -22,8 +17,6 @@ const router = useRouter()
 const route = useRoute()
 
 const MERCHANDISE_RETURN_TARGET_KEY = 'atriMerchandiseReturnTarget'
-
-let navTimeline
 
 const { data: products, pending, error } = await useFetch('/api/merchandise')
 
@@ -225,75 +218,6 @@ onBeforeRouteLeave((to) => {
     skipHomeIntroOnce()
   }
 })
-
-async function openSidebar() {
-  isSidebarOpen.value = true
-
-  await nextTick()
-
-  navTimeline?.kill()
-  navTimeline = gsap.timeline()
-
-  navTimeline
-    .fromTo(navBackdrop.value, {
-      autoAlpha: 0
-    }, {
-      autoAlpha: 1,
-      duration: 0.32,
-      ease: 'power2.out'
-    })
-    .fromTo(navPanel.value, {
-      xPercent: 100
-    }, {
-      xPercent: 0,
-      duration: 0.58,
-      ease: 'expo.out'
-    }, 0)
-    .fromTo(navCloseButton.value, {
-      rotate: -90,
-      autoAlpha: 0,
-      scale: 0.78
-    }, {
-      rotate: 0,
-      autoAlpha: 1,
-      scale: 1,
-      duration: 0.34,
-      ease: 'back.out(1.8)'
-    }, 0.22)
-}
-
-function closeSidebar() {
-  navTimeline?.kill()
-
-  navTimeline = gsap.timeline({
-    onComplete: () => {
-      isSidebarOpen.value = false
-    }
-  })
-
-  navTimeline
-    .to(navCloseButton.value, {
-      rotate: 90,
-      autoAlpha: 0,
-      scale: 0.8,
-      duration: 0.18,
-      ease: 'power2.in'
-    })
-    .to(navPanel.value, {
-      xPercent: 100,
-      duration: 0.38,
-      ease: 'power3.in'
-    }, 0)
-    .to(navBackdrop.value, {
-      autoAlpha: 0,
-      duration: 0.28,
-      ease: 'power2.in'
-    }, 0.1)
-}
-
-onBeforeUnmount(() => {
-  navTimeline?.kill()
-})
 </script>
 
 <template>
@@ -322,53 +246,6 @@ onBeforeUnmount(() => {
         <span class="back-button-sub">PREV PAGE</span>
       </span>
     </button>
-
-    <div class="fixed right-8 top-8 z-40 flex h-[50px] items-center">
-      <button
-        v-if="!isSidebarOpen"
-        type="button"
-        class="group flex h-[50px] w-[50px] cursor-pointer flex-col items-center justify-center space-y-[8px]"
-        aria-expanded="false"
-        aria-label="Open navigation"
-        @click="openSidebar"
-      >
-        <span class="h-[1px] w-8 bg-[#102a3a] transition-colors group-hover:bg-[#4fb0cf]" />
-        <span class="h-[1px] w-8 bg-[#102a3a] transition-colors group-hover:bg-[#4fb0cf]" />
-        <span class="h-[1px] w-8 bg-[#102a3a] transition-colors group-hover:bg-[#4fb0cf]" />
-      </button>
-    </div>
-
-    <div
-      v-if="isSidebarOpen"
-      class="fixed inset-0 z-50 grid grid-cols-[1fr_320px]"
-    >
-      <button
-        ref="navBackdrop"
-        type="button"
-        class="h-full w-full cursor-pointer bg-white/72 backdrop-blur-[3px]"
-        aria-label="Close navigation"
-        @click="closeSidebar"
-      />
-
-      <div
-        ref="navPanel"
-        class="relative z-10 h-screen w-full border-l border-[rgba(120,180,210,0.28)] bg-white/95 px-6 pt-[72px] shadow-[-18px_0_50px_rgba(80,130,160,0.08)]"
-      >
-        <button
-          ref="navCloseButton"
-          type="button"
-          class="group absolute right-6 top-7 flex h-10 w-10 cursor-pointer items-center justify-center"
-          aria-label="Close navigation"
-          aria-expanded="true"
-          @click="closeSidebar"
-        >
-          <span class="absolute h-[1px] w-8 rotate-45 bg-[#102a3a] transition-colors group-hover:bg-[#4fb0cf]" />
-          <span class="absolute h-[1px] w-8 -rotate-45 bg-[#102a3a] transition-colors group-hover:bg-[#4fb0cf]" />
-        </button>
-
-        <HomeSidebar :items="homeNavItems" />
-      </div>
-    </div>
 
     <div
       v-if="selectedProduct"
@@ -714,6 +591,32 @@ onBeforeUnmount(() => {
             </span>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section class="relative z-10 mx-auto mt-16 max-w-[1120px]">
+      <div class="nav-footer relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#fef7ff] to-white p-8">
+        <div class="nav-footer-pattern absolute inset-0 opacity-40" aria-hidden="true"></div>
+        
+        <div class="relative flex items-center justify-between">
+          <button class="nav-footer-btn nav-footer-btn-prev flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
+            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
+              <span class="nav-footer-arrow-left"></span>
+            </span>
+            <span class="text-sm font-black tracking-[0.25em]">PREV</span>
+          </button>
+
+          <button class="nav-footer-btn nav-footer-btn-all text-sm font-black tracking-[0.35em] text-[#765a78] transition hover:text-pink-400">
+            VIEW ALL
+          </button>
+
+          <button class="nav-footer-btn nav-footer-btn-next flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
+            <span class="text-sm font-black tracking-[0.25em]">NEXT</span>
+            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
+              <span class="nav-footer-arrow-right"></span>
+            </span>
+          </button>
+        </div>
       </div>
     </section>
   </main>
@@ -1464,5 +1367,81 @@ onBeforeUnmount(() => {
   .side-caption {
     display: block;
   }
+}
+
+.nav-footer-pattern {
+  background-image: radial-gradient(circle, #ffcbdb 0 2px, transparent 3px);
+  background-size: 32px 32px;
+}
+
+.nav-footer-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nav-footer-arrow-left {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.nav-footer-arrow-left::before,
+.nav-footer-arrow-left::after {
+  position: absolute;
+  content: "";
+  background: white;
+}
+
+.nav-footer-arrow-left::before {
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.nav-footer-arrow-left::after {
+  top: 4px;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(45deg);
+}
+
+.nav-footer-arrow-right {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.nav-footer-arrow-right::before,
+.nav-footer-arrow-right::after {
+  position: absolute;
+  content: "";
+  background: white;
+}
+
+.nav-footer-arrow-right::before {
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.nav-footer-arrow-right::after {
+  top: 4px;
+  right: 0;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg);
 }
 </style>
