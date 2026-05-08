@@ -10,7 +10,7 @@ definePageMeta({
 // ECharts 容器引用
 const barChartRef = ref<HTMLElement | null>(null)
 const pieChartRef = ref<HTMLElement | null>(null)
-const isDark = ref(false)
+const isDark = useState('admin-dark-mode', () => false)
 
 let barChart: echarts.ECharts | null = null
 let pieChart: echarts.ECharts | null = null
@@ -153,7 +153,7 @@ onUnmounted(() => {
         <div class="grid grid-cols-2 gap-4">
           <div class="stagger-card group relative flex flex-col justify-between overflow-hidden rounded-[24px] bg-white p-6 text-gray-800 shadow-sm transition-all duration-300 hover:bg-[#5b4eff] hover:text-white hover:shadow-lg hover:shadow-[#5b4eff]/30">
             <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-gray-500 transition-colors duration-300 group-hover:text-white/90">销售额</span>
+              <span class="metric-title text-sm font-bold text-gray-500 transition-colors duration-300 group-hover:text-white/90">销售额</span>
             </div>
             <div class="mt-4 text-[32px] font-bold">¥128,450</div>
             <div class="mt-4">
@@ -162,7 +162,7 @@ onUnmounted(() => {
           </div>
 
           <div class="stagger-card group flex flex-col justify-between rounded-[24px] bg-white p-6 text-gray-800 shadow-sm transition-all duration-300 hover:bg-[#5b4eff] hover:text-white hover:shadow-lg hover:shadow-[#5b4eff]/30">
-            <div class="text-sm font-medium text-gray-500 transition-colors duration-300 group-hover:text-white/90">访问量</div>
+            <div class="metric-title text-sm font-bold text-gray-500 transition-colors duration-300 group-hover:text-white/90">访问量</div>
             <div class="mt-4 text-[32px] font-bold">3,450,210</div>
             <div class="mt-4">
               <span class="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 transition-colors duration-300 group-hover:bg-green-400/20 group-hover:text-green-300 group-hover:backdrop-blur-sm">↑ 2.67%</span>
@@ -170,7 +170,7 @@ onUnmounted(() => {
           </div>
 
           <div class="stagger-card group flex flex-col justify-between rounded-[24px] bg-white p-6 text-gray-800 shadow-sm transition-all duration-300 hover:bg-[#5b4eff] hover:text-white hover:shadow-lg hover:shadow-[#5b4eff]/30">
-            <div class="text-sm font-medium text-gray-500 transition-colors duration-300 group-hover:text-white/90">订单数</div>
+            <div class="metric-title text-sm font-bold text-gray-500 transition-colors duration-300 group-hover:text-white/90">订单数</div>
             <div class="mt-4 text-[32px] font-bold">1,450</div>
             <div class="mt-4">
               <span class="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 transition-colors duration-300 group-hover:bg-green-400/20 group-hover:text-green-300 group-hover:backdrop-blur-sm">↑ 1.67%</span>
@@ -178,7 +178,7 @@ onUnmounted(() => {
           </div>
 
           <div class="stagger-card group flex flex-col justify-between rounded-[24px] bg-white p-6 text-gray-800 shadow-sm transition-all duration-300 hover:bg-[#5b4eff] hover:text-white hover:shadow-lg hover:shadow-[#5b4eff]/30">
-            <div class="text-sm font-medium text-gray-500 transition-colors duration-300 group-hover:text-white/90">退货数</div>
+            <div class="metric-title text-sm font-bold text-gray-500 transition-colors duration-300 group-hover:text-white/90">退货数</div>
             <div class="mt-4 text-[32px] font-bold">82</div>
             <div class="mt-4">
               <span class="inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-500 transition-colors duration-300 group-hover:bg-red-400/20 group-hover:text-red-200 group-hover:backdrop-blur-sm">↓ 2.67%</span>
@@ -251,7 +251,7 @@ onUnmounted(() => {
                   <span class="font-bold text-gray-800">{{ item.percent }}%</span>
                 </div>
                 <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
-                  <div class="h-full rounded-full bg-[#5b4eff] opacity-60 transition-all duration-1000 ease-out" :style="{ width: `${item.percent}%` }"></div>
+                  <div class="h-full rounded-full bg-[#ef4444] opacity-70 transition-all duration-1000 ease-out" :style="{ width: `${item.percent}%` }"></div>
                 </div>
               </div>
             </div>
@@ -292,5 +292,13 @@ onUnmounted(() => {
 
 .dashboard-dark :deep(.text-gray-800) {
   color: #f3f6fb !important;
+}
+
+.dashboard-dark :deep(h2) {
+  color: #f8fafc;
+}
+
+.dashboard-dark :deep(.metric-title) {
+  color: #f8fafc !important;
 }
 </style>

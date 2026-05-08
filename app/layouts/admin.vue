@@ -2,6 +2,7 @@
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
+const isDark = useState('admin-dark-mode', () => false)
 
 // 真实的路由路径，注意加上 path 字段
 const navItems = [
@@ -24,9 +25,15 @@ const navItems = [
 </script>
 
 <template>
-  <div class="flex h-screen w-full bg-[#f8f9fa] overflow-hidden">
+  <div
+    class="flex h-screen w-full overflow-hidden transition-colors duration-500"
+    :class="isDark ? 'bg-[#07080d]' : 'bg-[#f8f9fa]'"
+  >
     
-    <aside class="flex h-screen w-[84px] shrink-0 flex-col items-center border-r border-gray-100 bg-white py-10 z-10">
+    <aside
+      class="z-10 flex h-screen w-[84px] shrink-0 flex-col items-center border-r py-10 transition-colors duration-500"
+      :class="isDark ? 'border-white/10 bg-[#0f111a]' : 'border-gray-100 bg-white'"
+    >
       <nav class="mt-5 flex flex-col gap-6">
         <NuxtLink
           v-for="item in navItems"
@@ -34,9 +41,13 @@ const navItems = [
           :to="item.path"
           class="group flex h-[52px] w-[52px] items-center justify-center rounded-[18px] transition-all duration-300 ease-out"
           :class="[
-            route.path === item.path 
-              ? 'bg-[#f3f0fd] text-[#5b4097]' 
-              : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+            route.path === item.path
+              ? isDark
+                ? 'bg-[#242837] text-[#dbeafe]'
+                : 'bg-[#f3f0fd] text-[#5b4097]'
+              : isDark
+                ? 'text-gray-500 hover:bg-white/10 hover:text-gray-200'
+                : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
           ]"
         >
           <svg 
@@ -53,7 +64,10 @@ const navItems = [
       </nav>
 
       <div class="mt-auto flex flex-col items-center pb-4">
-        <button class="group flex h-[52px] w-[52px] items-center justify-center rounded-[18px] text-gray-400 transition-all duration-300 ease-out hover:bg-red-50 hover:text-red-500">
+        <button
+          class="group flex h-[52px] w-[52px] items-center justify-center rounded-[18px] transition-all duration-300 ease-out"
+          :class="isDark ? 'text-gray-500 hover:bg-red-400/10 hover:text-red-300' : 'text-gray-400 hover:bg-red-50 hover:text-red-500'"
+        >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             fill="none" 
@@ -68,7 +82,7 @@ const navItems = [
       </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto">
+    <main class="hide-scrollbar flex-1 overflow-y-auto">
       <slot />
     </main>
     
@@ -78,5 +92,13 @@ const navItems = [
 <style scoped>
 a, button {
   -webkit-tap-highlight-color: transparent;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 </style>
