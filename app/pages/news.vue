@@ -36,6 +36,14 @@
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
+            <button
+              class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
+              aria-label="Close news detail"
+              @click="closeNewsDetail"
+            >
+              x
+            </button>
+
             <time class="block text-xl font-bold tracking-[0.08em] text-sky-500">
               {{ selectedNews.date }}
             </time>
@@ -90,30 +98,6 @@
 
         </div>
       </article>
-
-      <div class="nav-footer relative mx-auto mt-8 max-w-[1120px] overflow-hidden rounded-3xl bg-gradient-to-b from-[#fef7ff] to-white p-8">
-        <div class="nav-footer-pattern absolute inset-0 opacity-40" aria-hidden="true"></div>
-        
-        <div class="relative flex items-center justify-between">
-          <button class="nav-footer-btn nav-footer-btn-prev flex items-center gap-3 text-[#765a78] transition hover:text-pink-400" @click="prevNews">
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-left"></span>
-            </span>
-            <span class="text-sm font-black tracking-[0.25em]">PREV</span>
-          </button>
-
-          <button class="nav-footer-btn nav-footer-btn-all text-sm font-black tracking-[0.35em] text-[#765a78] transition hover:text-pink-400" @click="closeNewsDetail">
-            VIEW ALL
-          </button>
-
-          <button class="nav-footer-btn nav-footer-btn-next flex items-center gap-3 text-[#765a78] transition hover:text-pink-400" @click="nextNews">
-            <span class="text-sm font-black tracking-[0.25em]">NEXT</span>
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-right"></span>
-            </span>
-          </button>
-        </div>
-      </div>
     </div>
 
     <div class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24">
@@ -305,21 +289,6 @@ function closeNewsDetail() {
   selectedNews.value = null
 }
 
-function nextNews() {
-  if (!selectedNews.value) return
-  
-  const currentIndex = newsList.findIndex((item) => item.id === selectedNews.value.id)
-  const nextIndex = (currentIndex + 1) % newsList.length
-  selectedNews.value = newsList[nextIndex]
-}
-
-function prevNews() {
-  if (!selectedNews.value) return
-  
-  const currentIndex = newsList.findIndex((item) => item.id === selectedNews.value.id)
-  const prevIndex = (currentIndex - 1 + newsList.length) % newsList.length
-  selectedNews.value = newsList[prevIndex]
-}
 </script>
 
 <style scoped>
@@ -506,79 +475,4 @@ function prevNews() {
   }
 }
 
-.nav-footer-pattern {
-  background-image: radial-gradient(circle, #ffcbdb 0 2px, transparent 3px);
-  background-size: 32px 32px;
-}
-
-.nav-footer-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.nav-footer-arrow-left {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-left::before,
-.nav-footer-arrow-left::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-left::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-left::after {
-  top: 4px;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-left: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(45deg);
-}
-
-.nav-footer-arrow-right {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-right::before,
-.nav-footer-arrow-right::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-right::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-right::after {
-  top: 4px;
-  right: 0;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(-45deg);
-}
 </style>
