@@ -68,25 +68,23 @@
           <div
             ref="thumbnailScroller"
             class="scene-carousel flex gap-9 overflow-x-auto pb-7 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            :class="{ 'is-dragging': isDragging, 'is-gliding': isGliding }"
+            :class="{ 'is-dragging': isDragging }"
             @pointerdown="startThumbnailDrag"
             @pointerleave="stopThumbnailDrag"
             @pointermove="moveThumbnailDrag"
-            @pointercancel="stopThumbnailDrag"
             @pointerup="stopThumbnailDrag"
-            @scroll.passive="syncThumbnailLoop"
           >
             <button
-            v-for="scene in loopedScenes"
-            :key="`${scene.loop}-${scene.id}`"
+            v-for="(scene, index) in scenes"
+            :key="scene.id"
             class="gallery-thumb group relative shrink-0"
-            @click="handleSceneClick(scene.realIndex)"
+            @click="handleSceneClick(index)"
           >
             <!-- 四角框线 -->
-            <span class="corner corner-tl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-tr" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-bl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-br" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+            <span class="corner corner-tl" :class="activeIndex === index ? 'is-active' : ''"></span>
+            <span class="corner corner-tr" :class="activeIndex === index ? 'is-active' : ''"></span>
+            <span class="corner corner-bl" :class="activeIndex === index ? 'is-active' : ''"></span>
+            <span class="corner corner-br" :class="activeIndex === index ? 'is-active' : ''"></span>
 
             <!-- 缩略图占位 -->
             <div class="gallery-thumb-image overflow-hidden bg-white">
@@ -102,7 +100,7 @@
 
             <div
               class="mx-auto mt-3 h-0 w-0 border-x-[6px] border-b-[10px] border-x-transparent"
-              :class="activeIndex === scene.realIndex ? 'border-b-cyan-300' : 'border-b-gray-300'"
+              :class="activeIndex === index ? 'border-b-cyan-300' : 'border-b-gray-300'"
             ></div>
           </button>
           </div>
@@ -177,7 +175,6 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 const activeIndex = ref(2)
 const thumbnailScroller = ref(null)
 const isDragging = ref(false)
-const isGliding = ref(false)
 const shouldSuppressClick = ref(false)
 
 let dragStartX = 0
@@ -186,18 +183,14 @@ let dragMoved = false
 let dragPointerId = null
 let dragAnimationId = 0
 let inertiaAnimationId = 0
-let scrollSyncAnimationId = 0
 let lastPointerX = 0
 let lastPointerTime = 0
 let dragVelocity = 0
 let targetScrollLeft = 0
-let loopWidthCache = 0
 
 const dragEase = 0.36
 const inertiaFriction = 0.94
 const minInertiaVelocity = 0.08
-const loopCopyCount = 3
-const loopMiddleCopy = 1
 
 const scenes = [
   {
@@ -299,29 +292,18 @@ const scenes = [
 ]
 
 const activeScene = computed(() => scenes[activeIndex.value])
-const loopedScenes = computed(() =>
-  Array.from({ length: loopCopyCount }, (_, loop) =>
-    scenes.map((scene, realIndex) => ({
-      ...scene,
-      loop,
-      realIndex
-    }))
-  ).flat()
-)
 
 function selectScene(index) {
   activeIndex.value = index
   nextTick(centerActiveThumbnail)
 }
 
-function centerActiveThumbnail(behavior = 'smooth') {
+function centerActiveThumbnail() {
   const scroller = thumbnailScroller.value
-  const activeThumb = scroller?.querySelectorAll('.gallery-thumb')?.[
-    scenes.length * loopMiddleCopy + activeIndex.value
-  ]
+  const activeThumb = scroller?.querySelectorAll('.gallery-thumb')?.[activeIndex.value]
 
   activeThumb?.scrollIntoView({
-    behavior: isDragging.value || isGliding.value ? 'auto' : behavior,
+    behavior: isDragging.value ? 'auto' : 'smooth',
     block: 'nearest',
     inline: 'center'
   })
@@ -333,60 +315,10 @@ function handleSceneClick(index) {
   selectScene(index)
 }
 
-function getLoopWidth(scroller) {
-  if (loopWidthCache) return loopWidthCache
+function clampScrollLeft(scroller, value) {
+  const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
 
-  const thumbs = scroller?.querySelectorAll('.gallery-thumb')
-
-  if (!thumbs || thumbs.length <= scenes.length) return 0
-
-  loopWidthCache = thumbs[scenes.length].offsetLeft - thumbs[0].offsetLeft
-
-  return loopWidthCache
-}
-
-function syncLoopScroll(scroller) {
-  const loopWidth = getLoopWidth(scroller)
-  if (!loopWidth) return
-
-  const minScrollLeft = loopWidth * 0.5
-  const maxScrollLeft = loopWidth * 1.5
-  let offset = 0
-
-  while (scroller.scrollLeft < minScrollLeft) {
-    offset += loopWidth
-    scroller.scrollLeft += loopWidth
-  }
-
-  while (scroller.scrollLeft > maxScrollLeft) {
-    offset -= loopWidth
-    scroller.scrollLeft -= loopWidth
-  }
-
-  if (!offset) return
-
-  targetScrollLeft += offset
-  dragStartScrollLeft += offset
-}
-
-function syncThumbnailLoop() {
-  if (isDragging.value || isGliding.value || scrollSyncAnimationId) return
-
-  scrollSyncAnimationId = requestAnimationFrame(() => {
-    scrollSyncAnimationId = 0
-
-    const scroller = thumbnailScroller.value
-    if (!scroller) return
-
-    syncLoopScroll(scroller)
-  })
-}
-
-function stopScrollSync() {
-  if (!scrollSyncAnimationId) return
-
-  cancelAnimationFrame(scrollSyncAnimationId)
-  scrollSyncAnimationId = 0
+  return Math.max(0, Math.min(value, maxScrollLeft))
 }
 
 function stopDragAnimation() {
@@ -397,14 +329,10 @@ function stopDragAnimation() {
 }
 
 function stopInertia() {
-  if (!inertiaAnimationId) {
-    isGliding.value = false
-    return
-  }
+  if (!inertiaAnimationId) return
 
   cancelAnimationFrame(inertiaAnimationId)
   inertiaAnimationId = 0
-  isGliding.value = false
 }
 
 function animateDragScroll() {
@@ -416,27 +344,24 @@ function animateDragScroll() {
   }
 
   scroller.scrollLeft += (targetScrollLeft - scroller.scrollLeft) * dragEase
-  syncLoopScroll(scroller)
   dragAnimationId = requestAnimationFrame(animateDragScroll)
 }
 
 function startInertia() {
   const scroller = thumbnailScroller.value
-  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) {
-    isGliding.value = false
-    return
-  }
-
-  isGliding.value = true
+  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) return
 
   const step = () => {
-    scroller.scrollLeft += dragVelocity * 16
-    syncLoopScroll(scroller)
+    const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
+    const nextScrollLeft = clampScrollLeft(scroller, scroller.scrollLeft + dragVelocity * 16)
+
+    scroller.scrollLeft = nextScrollLeft
     dragVelocity *= inertiaFriction
 
-    if (Math.abs(dragVelocity) < minInertiaVelocity) {
+    const hitEdge = nextScrollLeft === 0 || nextScrollLeft === maxScrollLeft
+
+    if (Math.abs(dragVelocity) < minInertiaVelocity || hitEdge) {
       inertiaAnimationId = 0
-      isGliding.value = false
       return
     }
 
@@ -452,7 +377,6 @@ function startThumbnailDrag(event) {
 
   stopInertia()
   stopDragAnimation()
-  stopScrollSync()
   isDragging.value = true
   dragMoved = false
   shouldSuppressClick.value = false
@@ -482,7 +406,7 @@ function moveThumbnailDrag(event) {
     shouldSuppressClick.value = true
   }
 
-  targetScrollLeft = dragStartScrollLeft - distance
+  targetScrollLeft = clampScrollLeft(scroller, dragStartScrollLeft - distance)
   dragVelocity = (lastPointerX - event.clientX) / elapsed
   lastPointerX = event.clientX
   lastPointerTime = now
@@ -495,7 +419,6 @@ function stopThumbnailDrag(event) {
   isDragging.value = false
   stopDragAnimation()
   scroller.scrollLeft = targetScrollLeft
-  syncLoopScroll(scroller)
 
   if (dragPointerId !== null) {
     scroller?.releasePointerCapture?.(dragPointerId)
@@ -520,13 +443,12 @@ function nextScene() {
 }
 
 onMounted(() => {
-  nextTick(() => centerActiveThumbnail('auto'))
+  nextTick(centerActiveThumbnail)
 })
 
 onUnmounted(() => {
   stopDragAnimation()
   stopInertia()
-  stopScrollSync()
 })
 </script>
 
@@ -597,15 +519,13 @@ onUnmounted(() => {
   border-right-width: 2px;
 }
 
-.scene-carousel.is-dragging,
-.scene-carousel.is-gliding {
+.scene-carousel.is-dragging {
   cursor: grabbing;
   scroll-behavior: auto;
   scroll-snap-type: none;
 }
 
-.scene-carousel.is-dragging button,
-.scene-carousel.is-gliding button {
+.scene-carousel.is-dragging button {
   pointer-events: none;
 }
 
