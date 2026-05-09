@@ -898,6 +898,8 @@ onBeforeRouteLeave((to) => {
   outline-offset: 4px;
 }
 
+
+
 .checkout-dialog {
   isolation: isolate;
   background-color: #f7fcfe;

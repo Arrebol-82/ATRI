@@ -1,37 +1,41 @@
 <template>
-  <footer class="relative mt-24 overflow-hidden text-[#17263a]">
+  <footer class="relative mt-32 min-h-[680px] overflow-hidden text-[#10213a]">
     <!-- 蓝色背景 -->
-    <div class="footer-blue-bg absolute inset-0"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-[#eef9ff] via-[#d7efff] to-[#a8d9ff]"></div>
 
-    <!-- 顶部弧线 -->
-    <div
-      class="pointer-events-none absolute left-1/2 top-0 h-24 w-[140%] -translate-x-1/2 rounded-[0_0_50%_50%] border-t border-white/80"
-    ></div>
+    <!-- 白色大椭圆：制造“凹下去”的弧形 -->
+    <div class="absolute left-1/2 top-[-250px] h-[430px] w-[150%] -translate-x-1/2 rounded-[50%] bg-white"></div>
 
-    <div class="relative z-10 mx-auto max-w-[1100px] px-6 pb-20 pt-24">
+    <!-- 凹弧形细线装饰 -->
+    <div class="pointer-events-none absolute left-1/2 top-[-232px] h-[430px] w-[154%] -translate-x-1/2 rounded-[50%] border-b border-sky-100/80"></div>
+    <div class="pointer-events-none absolute left-1/2 top-[-214px] h-[430px] w-[158%] -translate-x-1/2 rounded-[50%] border-b border-white/90"></div>
+
+    <!-- 内容 -->
+    <div class="relative z-10 mx-auto max-w-[980px] px-6 pb-24 pt-60">
       <!-- 导航 -->
-      <nav class="mx-auto max-w-[850px]">
-        <ul
-          class="flex flex-wrap items-center justify-center gap-x-14 gap-y-6 text-sm font-black tracking-[0.08em] md:text-base"
-        >
+      <nav>
+        <ul class="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 text-[13px] font-black tracking-[0.12em] md:text-[15px]">
           <li v-for="item in navList" :key="item.name">
-            <a :href="item.link" class="transition hover:text-sky-600">
-              <span v-if="item.name === 'HOME'" class="mr-1">♥</span>
+            <NuxtLink
+              :to="item.link"
+              class="transition hover:text-sky-600"
+            >
+              <span v-if="item.name === 'HOME'" class="mr-1 text-[11px]">♥</span>
               {{ item.name }}
-            </a>
+            </NuxtLink>
           </li>
         </ul>
       </nav>
 
-      <!-- 虚线 -->
-      <div class="mx-auto my-12 max-w-[860px] border-t border-dotted border-[#7faeca]"></div>
+      <!-- 虚线分割线 -->
+      <div class="mx-auto my-12 max-w-[820px] border-t border-dotted border-[#82aac4]"></div>
 
-      <!-- 底部信息 -->
-      <div class="grid grid-cols-1 items-center gap-10 md:grid-cols-3">
-        <!-- 左侧 -->
-        <div class="flex flex-col items-center gap-5 md:items-start">
+      <!-- 底部信息区 -->
+      <div class="grid grid-cols-1 items-center gap-12 md:grid-cols-[1fr_1.1fr_1fr]">
+        <!-- 左侧 OFFICIAL -->
+        <div class="flex flex-col items-center gap-6 md:items-start">
           <div class="flex items-center gap-5">
-            <span class="text-sm font-black tracking-[0.08em]">
+            <span class="text-[12px] font-black tracking-[0.15em]">
               OFFICIAL
             </span>
 
@@ -39,7 +43,7 @@
               v-for="item in officialLinks"
               :key="item.name"
               :href="item.link"
-              class="text-xl font-black transition hover:text-sky-600"
+              class="text-xl font-black leading-none transition hover:scale-110 hover:text-sky-600"
             >
               {{ item.icon }}
             </a>
@@ -47,34 +51,30 @@
 
           <a
             href="#contact"
-            class="group flex items-center gap-2 rounded-full bg-[#10265d] px-8 py-3 text-xs font-black tracking-[0.12em] text-white shadow-md transition hover:-translate-y-1 hover:bg-sky-500"
+            class="group flex items-center gap-3 rounded-full bg-[#182864] px-8 py-3 text-[12px] font-black tracking-[0.16em] text-white shadow-[0_10px_22px_rgba(24,40,100,0.22)] transition hover:-translate-y-1 hover:bg-sky-500"
           >
             <span>企業様のお問い合わせ</span>
             <span class="transition group-hover:translate-x-1">→</span>
           </a>
         </div>
 
-        <!-- 中间 logo -->
+        <!-- 中间 LOGO -->
         <div class="flex justify-center">
-          <a href="/" class="group text-center">
-            <div
-              class="text-5xl font-black leading-none tracking-[-0.04em] text-[#1f4f9c] drop-shadow-sm transition group-hover:scale-105"
-            >
+          <NuxtLink to="/" class="group block text-center">
+            <div class="footer-logo-text drop-shadow-[0_4px_4px_rgba(30,70,140,0.25)] transition group-hover:scale-105">
               ATRI
             </div>
 
-            <div
-              class="mt-2 rounded-full border-2 border-[#1f4f9c] px-4 py-1 text-xs font-black tracking-[0.18em] text-[#1f4f9c]"
-            >
+            <div class="mt-3 text-[13px] font-black tracking-[0.35em] text-[#264d9d]">
               MY DEAR MOMENTS
             </div>
-          </a>
+          </NuxtLink>
         </div>
 
-        <!-- 右侧 -->
-        <div class="flex flex-col items-center gap-8 md:items-end">
-          <div class="flex items-center gap-5">
-            <span class="text-sm font-black tracking-[0.08em]">
+        <!-- 右侧 SHARE -->
+        <div class="flex flex-col items-center gap-10 md:items-end">
+          <div class="flex items-center gap-6">
+            <span class="text-[12px] font-black tracking-[0.18em]">
               SHARE
             </span>
 
@@ -82,13 +82,13 @@
               v-for="item in shareLinks"
               :key="item.name"
               :href="item.link"
-              class="flex h-8 w-8 items-center justify-center rounded-full text-xl font-black transition hover:bg-white/80 hover:text-sky-600"
+              class="flex h-8 w-8 items-center justify-center rounded-full text-xl font-black transition hover:-translate-y-1 hover:bg-white/70 hover:text-sky-600"
             >
               {{ item.icon }}
             </a>
           </div>
 
-          <p class="text-center text-[11px] font-bold tracking-[0.08em] text-[#29465c] md:text-right">
+          <p class="text-center text-[10px] font-black tracking-[0.15em] text-[#29445c] md:text-right">
             ©ATRI PROJECT / SAMPLE WEBSITE
           </p>
         </div>
@@ -125,14 +125,17 @@ const shareLinks = [
 </script>
 
 <style scoped>
-.footer-blue-bg {
-  background: linear-gradient(
-    180deg,
-    #eefaff 0%,
-    #d9f2ff 35%,
-    #b9e7ff 100%
-  );
-  border-top-left-radius: 50% 90px;
-  border-top-right-radius: 50% 90px;
+.footer-logo-text {
+  font-size: 64px;
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #264d9d;
+}
+
+@media (max-width: 768px) {
+  .footer-logo-text {
+    font-size: 48px;
+  }
 }
 </style>

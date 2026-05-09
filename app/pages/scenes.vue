@@ -1,40 +1,5 @@
 <template>
   <section class="relative min-h-screen overflow-hidden bg-white text-black">
-    <!-- 背景科技装饰，不用图片，纯 CSS 做效果 -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute left-24 top-4 h-40 w-[520px] rounded-full bg-cyan-200/20 blur-3xl"></div>
-      <div class="absolute left-20 bottom-24 h-36 w-72 rounded-full bg-pink-200/30 blur-3xl"></div>
-      <div class="absolute right-0 top-0 h-[560px] w-[560px] rounded-full border border-cyan-200/50"></div>
-      <div class="absolute right-24 top-24 h-80 w-80 rounded-full border border-cyan-100"></div>
-      <div class="absolute right-36 top-32 h-56 w-56 rotate-45 border border-cyan-100 bg-cyan-50/30"></div>
-
-      <div class="absolute left-0 top-10 h-px w-[420px] rotate-12 bg-gradient-to-r from-transparent via-cyan-300 to-transparent"></div>
-      <div class="absolute left-0 bottom-24 h-px w-[520px] rotate-[-35deg] bg-gradient-to-r from-transparent via-cyan-300 to-transparent"></div>
-      <div class="absolute right-32 bottom-24 h-px w-[460px] rotate-[-18deg] bg-gradient-to-r from-transparent via-cyan-300 to-transparent"></div>
-      <div class="absolute left-[36%] top-16 h-24 w-24 rounded-full border border-yellow-200/70"></div>
-      <div class="absolute left-[37%] top-20 h-14 w-14 rounded-full border border-cyan-200/70"></div>
-
-      <div class="absolute left-8 top-1/2 text-[10px] tracking-[0.35em] text-black/60 [writing-mode:vertical-rl]">
-        logical subscriber
-      </div>
-      <div class="absolute right-8 top-1/2 text-[10px] tracking-[0.35em] text-black/60 [writing-mode:vertical-rl]">
-        Heaven is a fiction.
-      </div>
-      <div class="absolute left-10 bottom-8 border border-cyan-200 bg-cyan-50/70 px-4 py-3 text-cyan-400">
-        <p class="text-xs tracking-[0.45em]">OUTLINE</p>
-        <p class="mt-1 max-w-xs text-[10px] leading-relaxed">
-          Gallery module preview. Image area is currently made by CSS placeholders.
-        </p>
-      </div>
-    </div>
-
-    <!-- 右侧社交按钮装饰 -->
-    <div class="absolute bottom-28 right-8 z-20 hidden flex-col gap-3 md:flex">
-      <span class="flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs text-white">Li</span>
-      <span class="flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs text-white">f</span>
-      <span class="flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs text-white">X</span>
-    </div>
-
     <div class="relative z-10 mx-auto min-h-screen max-w-[1540px] px-8 py-14 lg:px-20">
       <!-- 标题 -->
       <header>
@@ -174,7 +139,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 
-const activeIndex = ref(2)
+const activeIndex = ref(0)
 const thumbnailScroller = ref(null)
 const isDragging = ref(false)
 const shouldSuppressClick = ref(false)
@@ -203,7 +168,7 @@ const scenes = [
       '白い霧を抜けて、登り切った先に「それ」はある。\nどこまでも続きそうな、一面の花畑。\n色とりどりの花々が鼻腔をくすぐる、とても綺麗な花畑。\n——そこにはいつも、君がいた。',
     thumbClass: 'bg-gradient-to-br from-indigo-900 via-purple-700 to-pink-300',
     mainClass: 'bg-gradient-to-br from-cyan-50 via-white to-pink-100',
-    image: '/images/sy1.jpg',
+    image: '/images/atri1.jpg',
   },
   {
     id: '002',
@@ -211,7 +176,7 @@ const scenes = [
       '懐かしい駅前通りに、夏の光が差し込んでいる。\n見慣れたはずの景色なのに、少しだけ違って見えた。\nその違和感が、物語の始まりだった。',
     thumbClass: 'bg-gradient-to-br from-sky-300 via-emerald-200 to-yellow-100',
     mainClass: 'bg-gradient-to-br from-sky-100 via-emerald-50 to-yellow-100',
-    image: '/images/sy2.jpg',
+    image: '/images/atri2.jpg',
   },
   {
     id: '003',
@@ -219,7 +184,7 @@ const scenes = [
       '透明な街の中を、光の線が走っていく。\n現実と仮想が重なり合う場所で、失くした記憶の断片が静かに浮かび上がった。',
     thumbClass: 'bg-gradient-to-br from-cyan-200 via-white to-blue-500',
     mainClass: 'bg-gradient-to-br from-cyan-100 via-white to-blue-200',
-    image: '/images/sy3.jpg',
+    image: '/images/atri3.jpg',
   },
   {
     id: '004',
@@ -227,7 +192,7 @@ const scenes = [
       '風に舞う花びらの中で、少女は空を見上げていた。\n柔らかな光に包まれたその表情は、どこか遠い約束を思い出しているようだった。',
     thumbClass: 'bg-gradient-to-br from-white via-pink-100 to-cyan-100',
     mainClass: 'bg-gradient-to-br from-white via-pink-50 to-cyan-100',
-    image: '/images/sy4.jpg',
+    image: '/images/atri4.jpg',
   },
   {
     id: '005',
@@ -235,63 +200,63 @@ const scenes = [
       '移動する車窓の向こうで、街の輪郭がゆっくり流れていく。\n静かな会話と沈黙の間に、少しずつ距離が縮まっていった。',
     thumbClass: 'bg-gradient-to-br from-slate-300 via-blue-100 to-indigo-300',
     mainClass: 'bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100',
-    image: '/images/sy5.jpg',
+    image: '/images/atri5.jpg',
   },
   {
     id: '006',
     description:
-      '夜の闇を切り裂くように、赤い光が走った。\nその一瞬だけ、誰も知らない真実が照らし出される。',
-    thumbClass: 'bg-gradient-to-br from-slate-950 via-indigo-900 to-pink-500',
-    mainClass: 'bg-gradient-to-br from-slate-900 via-indigo-800 to-pink-400',
-    image: '/images/story1.png',
+      '夕暮れの海岸辺で、波の音が静かに響いていた。\nオレンジ色の空に映る二人の影は、少しずつ近づいていった。',
+    thumbClass: 'bg-gradient-to-br from-orange-300 via-pink-200 to-purple-300',
+    mainClass: 'bg-gradient-to-br from-orange-100 via-pink-50 to-purple-100',
+    image: '/images/atri6.jpg',
   },
   {
     id: '007',
     description:
-      'Light lingers over the frame like a preview cut waiting for the final gallery asset.\nThe long strip now has enough visual rhythm to judge spacing and flow.',
-    thumbClass: 'bg-gradient-to-br from-cyan-100 via-white to-rose-100',
-    mainClass: 'bg-gradient-to-br from-cyan-50 via-white to-rose-100',
-    image: '/images/story2.png',
+      '図書館の静けさの中で、ページをめくる音だけが聞こえる。\n君が真剣に本を読む横顔は、いつまでも見ていられる。',
+    thumbClass: 'bg-gradient-to-br from-amber-200 via-yellow-100 to-orange-200',
+    mainClass: 'bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100',
+    image: '/images/atri7.jpg',
   },
   {
     id: '008',
     description:
-      'A brighter placeholder for checking the full twelve-image preview row.\nIt keeps the gallery feeling alive while the final scene images are prepared.',
-    thumbClass: 'bg-gradient-to-br from-blue-100 via-white to-yellow-100',
-    mainClass: 'bg-gradient-to-br from-blue-50 via-white to-yellow-100',
-    image: '/images/sy1(1).png',
+      '雨上がりの街路樹の下で、水たまりに映る空を見ていた。\n君が差し出した傘の中は、世界で一番暖かい場所だった。',
+    thumbClass: 'bg-gradient-to-br from-blue-300 via-cyan-200 to-teal-300',
+    mainClass: 'bg-gradient-to-br from-blue-100 via-cyan-50 to-teal-100',
+    image: '/images/atri8.jpg',
   },
   {
     id: '009',
     description:
-      'Preview frame for testing density in the horizontal gallery strip.\nThe selection indicator should stay easy to follow while users drag through the row.',
-    thumbClass: 'bg-gradient-to-br from-sky-200 via-white to-cyan-300',
-    mainClass: 'bg-gradient-to-br from-sky-100 via-white to-cyan-200',
-    image: '/images/tx1.jpg',
+      '冬の夜空に咲く花火は、一瞬の美しさだけれど、\n君と一緒に見た景色は、永遠に記憶に残る。',
+    thumbClass: 'bg-gradient-to-br from-red-400 via-orange-300 to-yellow-300',
+    mainClass: 'bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100',
+    image: '/images/atri9.jpg',
   },
   {
     id: '010',
     description:
-      'A soft contrast preview that keeps the drag motion from feeling visually flat.\nThe asset can be replaced later without changing the interaction model.',
-    thumbClass: 'bg-gradient-to-br from-violet-200 via-white to-pink-200',
-    mainClass: 'bg-gradient-to-br from-violet-100 via-white to-pink-100',
-    image: '/images/tx2.jpg',
+      '春の桜吹雪の中で、君の笑顔が一番輝いていた。\n舞い落ちる花びらが、二人の時間を優しく包み込んだ。',
+    thumbClass: 'bg-gradient-to-br from-pink-300 via-rose-200 to-red-200',
+    mainClass: 'bg-gradient-to-br from-pink-100 via-rose-50 to-red-100',
+    image: '/images/atri10.jpg',
   },
   {
     id: '011',
     description:
-      'This slot adds another color beat in the long row.\nIt helps validate the final gallery pacing before all production images are ready.',
-    thumbClass: 'bg-gradient-to-br from-emerald-100 via-cyan-100 to-blue-300',
-    mainClass: 'bg-gradient-to-br from-emerald-50 via-cyan-50 to-blue-200',
-    image: '/images/tx3.jpg',
+      '星空の下で、君の手を握りしめていた。\n無数の星が瞬く中で、二人の約束は永遠に輝く。',
+    thumbClass: 'bg-gradient-to-br from-indigo-400 via-purple-300 to-violet-300',
+    mainClass: 'bg-gradient-to-br from-indigo-100 via-purple-50 to-violet-100',
+    image: '/images/atri11.jpg',
   },
   {
     id: '012',
     description:
-      'The last temporary preview in the twelve-image set.\nThe release motion should coast gently instead of stopping in a stiff, mechanical way.',
-    thumbClass: 'bg-gradient-to-br from-amber-100 via-white to-cyan-200',
-    mainClass: 'bg-gradient-to-br from-amber-50 via-white to-cyan-100',
-    image: '/images/tx4.jpg',
+      '新しい朝が来て、君と共に歩き出す。\nこれからもずっと、二人で同じ道を歩いていこう。',
+    thumbClass: 'bg-gradient-to-br from-green-300 via-emerald-200 to-teal-200',
+    mainClass: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100',
+    image: '/images/atri12.jpg',
   },
 ]
 

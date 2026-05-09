@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { gsap } from 'gsap'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import CharactersSection from '~/components/CharactersSection.vue'
