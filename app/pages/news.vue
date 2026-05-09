@@ -7,7 +7,7 @@
       <div class="absolute left-[20%] bottom-20 h-[200px] w-[200px] rounded-full border border-sky-100/50"></div>
     </div>
 
-    <!-- 新闻详情弹窗 -->
+    <!-- 新闻详情页 -->
     <div
       v-if="selectedNews"
       class="fixed inset-0 z-[60] overflow-y-auto bg-white"
@@ -15,8 +15,6 @@
       <article
         class="news-detail relative min-h-screen w-full overflow-hidden p-6 text-[#263f48] md:p-10 lg:p-14"
       >
-
-
         <div class="news-detail-bubbles" aria-hidden="true">
           <span />
           <span />
@@ -37,13 +35,14 @@
             <div class="mb-6 flex items-center justify-between">
               <button
                 class="flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
-                @click="closeNewsDetail"
+                @click="goBack"
               >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
                 <span>BACK</span>
               </button>
+
               <button
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
                 aria-label="Close news detail"
@@ -68,15 +67,18 @@
 
               <section class="rounded-2xl bg-sky-50/80 p-6">
                 <h3 class="mb-4 text-xl font-black text-sky-500">イベント概要</h3>
+
                 <dl class="space-y-3">
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">日程</dt>
                     <dd>{{ selectedNews.event.date }}</dd>
                   </div>
+
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">会場</dt>
                     <dd>{{ selectedNews.event.place }}</dd>
                   </div>
+
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">内容</dt>
                     <dd>{{ selectedNews.event.content }}</dd>
@@ -86,6 +88,7 @@
 
               <section>
                 <h3 class="mb-4 text-xl font-black text-sky-500">注意事項</h3>
+
                 <ul class="list-disc space-y-2 pl-6">
                   <li v-for="note in selectedNews.notes" :key="note">
                     {{ note }}
@@ -96,19 +99,22 @@
 
             <div class="mt-12 border-t-2 border-sky-100 pt-8">
               <p class="mb-4 text-sm font-black tracking-[0.3em] text-sky-400">SHARE</p>
+
               <div class="flex gap-3">
-                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm text-white">X</button>
-                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-sm text-white">Li</button>
+                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm text-white">
+                  X
+                </button>
+                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-sm text-white">
+                  Li
+                </button>
               </div>
             </div>
-
           </div>
-
-
         </div>
       </article>
     </div>
 
+    <!-- 新闻列表页 -->
     <div class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24">
       <!-- 标题 -->
       <header class="mb-14">
@@ -117,6 +123,7 @@
             <h1 class="text-6xl font-black uppercase tracking-[0.04em] text-sky-400 md:text-8xl">
               NEWS
             </h1>
+
             <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
               ニュース
             </p>
@@ -135,7 +142,6 @@
         </div>
       </header>
 
-      <!-- 新闻列表页 -->
       <main>
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <article
@@ -152,6 +158,7 @@
                 :alt="item.title"
                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
+
               <div class="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold tracking-[0.15em] text-sky-500 shadow-sm">
                 NEWS
               </div>
@@ -175,7 +182,8 @@
             class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
           >
             <span>MORE</span>
-            <span class="group-hover:translate-x-1 transition-transform">
+
+            <span class="transition-transform group-hover:translate-x-1">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -189,7 +197,11 @@
             @click="handleExpand"
           >
             <span>MORE</span>
-            <span class="group-hover:translate-x-1 transition-transform" :class="{ 'animate-pulse': isExpanding }">
+
+            <span
+              class="transition-transform group-hover:translate-x-1"
+              :class="{ 'animate-pulse': isExpanding }"
+            >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -197,12 +209,23 @@
           </button>
 
           <!-- 展开后的分页装饰 -->
-          <div v-else class="flex items-center justify-center gap-4 text-lg font-bold text-sky-400 animate-fade-in">
-            <button class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 text-white">1</button>
-            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">2</button>
+          <div
+            v-else
+            class="flex animate-fade-in items-center justify-center gap-4 text-lg font-bold text-sky-400"
+          >
+            <button class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 text-white">
+              1
+            </button>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">
+              2
+            </button>
             <span>...</span>
-            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">10</button>
-            <button class="ml-2 rounded-full border border-sky-300 px-5 py-2 text-sm tracking-[0.2em] hover:bg-sky-50">NEXT</button>
+            <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">
+              10
+            </button>
+            <button class="ml-2 rounded-full border border-sky-300 px-5 py-2 text-sm tracking-[0.2em] hover:bg-sky-50">
+              NEXT
+            </button>
           </div>
         </div>
       </main>
@@ -211,7 +234,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const props = defineProps({
   showFullPage: {
@@ -224,29 +250,6 @@ const selectedNews = ref(null)
 const showAllNews = ref(props.showFullPage)
 const isExpanding = ref(false)
 
-const displayedNews = computed(() => {
-  if (showAllNews.value) {
-    return newsList
-  }
-  return newsList.slice(0, 3)
-})
-
-function handleExpand() {
-  if (props.showFullPage) {
-    isExpanding.value = true
-    setTimeout(() => {
-      showAllNews.value = true
-      setTimeout(() => {
-        isExpanding.value = false
-      }, 500)
-    }, 100)
-  }
-}
-
-function goBack() {
-  selectedNews.value = null
-}
-
 const newsList = [
   {
     id: 1,
@@ -255,18 +258,18 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-pink-100 via-yellow-50 to-emerald-100',
     body: [
       'ATRI記念イベントの詳細情報を公開しました。作品の世界観を楽しめるトークや展示企画など、特別な一日を予定しています。',
-      'チケットの受付期間や参加方法につきましては、下記の概要をご確認ください。今後の追加情報も本ページにて順次お知らせいたします。',
+      'チケットの受付期間や参加方法につきましては、下記の概要をご確認ください。今後の追加情報も本ページにて順次お知らせいたします。'
     ],
     event: {
       date: '2026年8月16日（日）',
       place: 'アクアシティホール',
-      content: 'キャストトーク、展示、来場者特典配布など',
+      content: 'キャストトーク、展示、来場者特典配布など'
     },
     notes: [
       '内容は予告なく変更となる場合があります。',
       '会場への直接のお問い合わせはご遠慮ください。',
-      '最新情報は公式サイトにてご確認ください。',
-    ],
+      '最新情報は公式サイトにてご確認ください。'
+    ]
   },
   {
     id: 2,
@@ -275,17 +278,17 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-slate-200 via-white to-sky-300',
     body: [
       'ATRI公式スペシャルイベントの開催が決定しました。作品を応援してくださる皆さまに向けて、特別な企画を準備中です。',
-      '開催日時、出演者、チケット情報などの詳細は後日発表いたします。',
+      '開催日時、出演者、チケット情報などの詳細は後日発表いたします。'
     ],
     event: {
       date: '後日公開予定',
       place: '後日公開予定',
-      content: 'スペシャルトーク、最新情報発表など',
+      content: 'スペシャルトーク、最新情報発表など'
     },
     notes: [
       '詳細は後日発表いたします。',
-      '本イベントの内容は変更となる場合があります。',
-    ],
+      '本イベントの内容は変更となる場合があります。'
+    ]
   },
   {
     id: 3,
@@ -294,17 +297,17 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-pink-100 via-white to-cyan-100',
     body: [
       'キャラクターの誕生日を記念して、抽選プレゼントキャンペーンを実施します。',
-      '対象期間中に指定の方法で応募された方の中から、直筆サイン色紙をプレゼントいたします。',
+      '対象期間中に指定の方法で応募された方の中から、直筆サイン色紙をプレゼントいたします。'
     ],
     event: {
       date: '2026年3月3日（火）〜3月10日（火）',
       place: '公式SNS',
-      content: 'フォロー＆リポストキャンペーン',
+      content: 'フォロー＆リポストキャンペーン'
     },
     notes: [
       '応募には公式SNSアカウントのフォローが必要です。',
-      '当選者には後日DMにてご連絡します。',
-    ],
+      '当選者には後日DMにてご連絡します。'
+    ]
   },
   {
     id: 4,
@@ -313,17 +316,17 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-yellow-50 via-pink-100 to-lime-100',
     body: [
       'イベントに関する追加情報を公開しました。あわせて、来場者向けのキャンペーンも実施予定です。',
-      '詳細は各項目をご確認ください。',
+      '詳細は各項目をご確認ください。'
     ],
     event: {
       date: '2026年3月16日（月）',
       place: '公式サイト内',
-      content: '追加キャンペーン情報公開',
+      content: '追加キャンペーン情報公開'
     },
     notes: [
       'キャンペーン内容は変更となる可能性があります。',
-      '応募条件をよくご確認ください。',
-    ],
+      '応募条件をよくご確認ください。'
+    ]
   },
   {
     id: 5,
@@ -332,17 +335,17 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-orange-100 via-cyan-50 to-rose-100',
     body: [
       'Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。',
-      '対象店舗、応募方法、特典内容については下記をご確認ください。',
+      '対象店舗、応募方法、特典内容については下記をご確認ください。'
     ],
     event: {
       date: '2026年2月13日（金）開始',
       place: '対象店舗',
-      content: 'Blu-ray購入者限定特典キャンペーン',
+      content: 'Blu-ray購入者限定特典キャンペーン'
     },
     notes: [
       '特典はなくなり次第終了となります。',
-      '詳しくは対象店舗の案内をご確認ください。',
-    ],
+      '詳しくは対象店舗の案内をご確認ください。'
+    ]
   },
   {
     id: 6,
@@ -351,19 +354,41 @@ const newsList = [
     bgClass: 'bg-gradient-to-br from-sky-100 via-purple-100 to-pink-100',
     body: [
       'スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。',
-      '制作の裏側やキャラクターについて語る、ファン必見の内容です。',
+      '制作の裏側やキャラクターについて語る、ファン必見の内容です。'
     ],
     event: {
       date: '2026年1月19日（月）',
       place: 'イベント会場',
-      content: 'スタッフ＆キャストトーク',
+      content: 'スタッフ＆キャストトーク'
     },
     notes: [
       '登壇者は予告なく変更となる場合があります。',
-      '会場内での撮影・録音は禁止です。',
-    ],
-  },
+      '会場内での撮影・録音は禁止です。'
+    ]
+  }
 ]
+
+const displayedNews = computed(() => {
+  if (showAllNews.value) {
+    return newsList
+  }
+
+  return newsList.slice(0, 3)
+})
+
+function handleExpand() {
+  if (props.showFullPage) {
+    isExpanding.value = true
+
+    setTimeout(() => {
+      showAllNews.value = true
+
+      setTimeout(() => {
+        isExpanding.value = false
+      }, 500)
+    }, 100)
+  }
+}
 
 function openNewsDetail(news) {
   selectedNews.value = news
@@ -373,6 +398,21 @@ function closeNewsDetail() {
   selectedNews.value = null
 }
 
+function goBack() {
+  // 如果当前正在看新闻详情，BACK 先关闭详情，回到新闻列表
+  // 这样不会刷新页面，也不会出现“只是闪一下”的问题
+  if (selectedNews.value) {
+    selectedNews.value = null
+    return
+  }
+
+  // 如果已经在新闻列表页，再按 BACK 才走浏览器/路由的上一页
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    router.push('/news')
+  }
+}
 </script>
 
 <style scoped>
@@ -570,10 +610,12 @@ function closeNewsDetail() {
     opacity: 0;
     transform: translateY(30px) scale(0.95);
   }
+
   60% {
     opacity: 1;
     transform: translateY(-5px) scale(1.02);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -590,10 +632,10 @@ function closeNewsDetail() {
     opacity: 0;
     transform: translateY(10px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
-
 </style>
