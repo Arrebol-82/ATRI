@@ -2,5 +2,16 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', 'shadcn-nuxt']
+  modules: ['@nuxtjs/tailwindcss'],
+  components: {
+    dirs: [
+      {
+        path: '~/components',
+        pathPrefix: false
+      }
+    ]
+  },
+  typescript: {
+    shim: false
+  }
 })

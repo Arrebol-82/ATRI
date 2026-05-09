@@ -395,7 +395,7 @@ function openNewsDetail(news) {
 }
 
 function closeNewsDetail() {
-  selectedNews.value = null
+  window.location.href = '/news'
 }
 
 function goBack() {
