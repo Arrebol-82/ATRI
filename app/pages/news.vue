@@ -1,5 +1,8 @@
 <template>
-  <section class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]">
+  <section
+    :id="!showFullPage ? 'news' : undefined"
+    class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]"
+  >
     <!-- 背景装饰 -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div class="absolute left-[8%] top-20 h-[320px] w-[320px] rounded-full bg-sky-100/60 blur-3xl"></div>
@@ -16,20 +19,12 @@
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
-            <div class="mb-6 flex items-center justify-between">
-              <button
-                class="flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
-                @click="goBack"
-              >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                <span>BACK</span>
-              </button>
-
+            <!-- 详情页只保留关闭按钮：关闭后回到 12 个新闻展示框 -->
+            <div class="mb-6 flex items-center justify-end">
               <button
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
-                @click="goBack"
+                aria-label="Close news detail"
+                @click="closeDetailToNewsList"
               >
                 ×
               </button>
@@ -39,7 +34,7 @@
               {{ selectedNews.date }}
             </time>
 
-            <div class="mt-5 relative aspect-[16/9] overflow-hidden rounded-xl border-2 border-sky-200">
+            <div class="relative mt-5 aspect-[16/9] overflow-hidden rounded-xl border-2 border-sky-200">
               <img
                 :src="selectedNews.image"
                 :alt="selectedNews.title"
@@ -122,10 +117,11 @@
             </p>
           </div>
 
+          <!-- 这个 BACK 是新闻完整页返回首页新闻模块 -->
           <button
             v-if="showFullPage"
             class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
-            @click="goHome"
+            @click="goHomeNewsSection"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -188,7 +184,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 const router = useRouter()
 
@@ -216,7 +212,10 @@ const newsList = [
       place: 'アクアシティホール',
       content: 'キャストトーク、展示、来場者特典配布など'
     },
-    notes: ['内容は予告なく変更となる場合があります。', '会場への直接のお問い合わせはご遠慮ください。']
+    notes: [
+      '内容は予告なく変更となる場合があります。',
+      '会場への直接のお問い合わせはご遠慮ください。'
+    ]
   },
   {
     id: 2,
@@ -232,7 +231,9 @@ const newsList = [
       place: '後日公開予定',
       content: 'スペシャルトーク、最新情報発表など'
     },
-    notes: ['詳細は後日発表いたします。']
+    notes: [
+      '詳細は後日発表いたします。'
+    ]
   },
   {
     id: 3,
@@ -248,98 +249,130 @@ const newsList = [
       place: '公式SNS',
       content: 'フォロー＆リポストキャンペーン'
     },
-    notes: ['応募には公式SNSアカウントのフォローが必要です。']
+    notes: [
+      '応募には公式SNSアカウントのフォローが必要です。'
+    ]
   },
   {
     id: 4,
     date: '2026.03.16',
     title: 'イベント情報と追加キャンペーンのお知らせを公開しました',
     image: '/images/news4.jpg',
-    body: ['イベントに関する追加情報を公開しました。', '詳細は各項目をご確認ください。'],
+    body: [
+      'イベントに関する追加情報を公開しました。',
+      '詳細は各項目をご確認ください。'
+    ],
     event: {
       date: '2026年3月16日（月）',
       place: '公式サイト内',
       content: '追加キャンペーン情報公開'
     },
-    notes: ['キャンペーン内容は変更となる可能性があります。']
+    notes: [
+      'キャンペーン内容は変更となる可能性があります。'
+    ]
   },
   {
     id: 5,
     date: '2026.02.13',
     title: '【ゲーマーズ限定】Blu-ray全巻購入キャンペーンのお知らせ',
     image: '/images/news5.jpg',
-    body: ['Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'],
+    body: [
+      'Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'
+    ],
     event: {
       date: '2026年2月13日（金）開始',
       place: '対象店舗',
       content: 'Blu-ray購入者限定特典キャンペーン'
     },
-    notes: ['特典はなくなり次第終了となります。']
+    notes: [
+      '特典はなくなり次第終了となります。'
+    ]
   },
   {
     id: 6,
     date: '2026.01.19',
     title: 'スタッフ＆キャストによるトークイベント情報を公開しました',
     image: '/images/news6.jpg',
-    body: ['スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'],
+    body: [
+      'スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'
+    ],
     event: {
       date: '2026年1月19日（月）',
       place: 'イベント会場',
       content: 'スタッフ＆キャストトーク'
     },
-    notes: ['登壇者は予告なく変更となる場合があります。']
+    notes: [
+      '登壇者は予告なく変更となる場合があります。'
+    ]
   },
   {
     id: 7,
     date: '2025.12.25',
     title: '公式サイトを更新しました',
     image: '/images/news7.jpg',
-    body: ['公式サイトの情報を更新しました。', '今後も最新情報を順次公開予定です。'],
+    body: [
+      '公式サイトの情報を更新しました。',
+      '今後も最新情報を順次公開予定です。'
+    ],
     event: {
       date: '2025年12月25日（木）',
       place: '公式サイト',
       content: 'サイト更新情報'
     },
-    notes: ['最新情報は公式サイトをご確認ください。']
+    notes: [
+      '最新情報は公式サイトをご確認ください。'
+    ]
   },
   {
     id: 8,
     date: '2025.12.12',
     title: 'キャラクター情報を追加公開しました',
     image: '/images/news8.jpg',
-    body: ['キャラクター紹介ページに新しい情報を追加しました。'],
+    body: [
+      'キャラクター紹介ページに新しい情報を追加しました。'
+    ],
     event: {
       date: '2025年12月12日（金）',
       place: 'キャラクターページ',
       content: 'キャラクター情報追加'
     },
-    notes: ['掲載内容は変更となる場合があります。']
+    notes: [
+      '掲載内容は変更となる場合があります。'
+    ]
   },
   {
     id: 9,
     date: '2025.11.30',
     title: 'グッズ情報を公開しました',
     image: '/images/news9.jpg',
-    body: ['関連グッズの情報を公開しました。'],
+    body: [
+      '関連グッズの情報を公開しました。'
+    ],
     event: {
       date: '2025年11月30日（日）',
       place: '商品ページ',
       content: 'グッズ情報公開'
     },
-    notes: ['商品画像はイメージです。']
+    notes: [
+      '商品画像はイメージです。'
+    ]
   },
   {
     id: 10,
     date: '2025.11.15',
     title: 'ストーリーページを更新しました',
     image: '/images/news10.png',
-    body: ['ストーリーページの内容を更新しました。'],
+    body: [
+      'ストーリーページの内容を更新しました。'
+    ],
     event: {
       date: '2025年11月15日（土）',
       place: 'ストーリーページ',
       content: 'ストーリー情報更新'
     },
-    notes: ['一部内容にはネタバレを含む場合があります。']
+    notes: [
+      '一部内容にはネタバレを含む場合があります。'
+    ]
   },
   {
     id: 11,
@@ -347,13 +380,17 @@ const newsList = [
     title: '場面カットを追加しました',
     image: '/images/news11.jpg',
     imagePosition: 'center 30%',
-    body: ['ギャラリーページに新しい場面カットを追加しました。'],
+    body: [
+      'ギャラリーページに新しい場面カットを追加しました。'
+    ],
     event: {
       date: '2025年10月28日（火）',
       place: 'ギャラリーページ',
       content: '場面カット追加'
     },
-    notes: ['画像は開発中のものを含む場合があります。']
+    notes: [
+      '画像は開発中のものを含む場合があります。'
+    ]
   },
   {
     id: 12,
@@ -361,13 +398,17 @@ const newsList = [
     title: 'スペシャルコンテンツを公開しました',
     image: '/images/news12.jpg',
     imagePosition: 'center 25%',
-    body: ['スペシャルページに新しいコンテンツを公開しました。'],
+    body: [
+      'スペシャルページに新しいコンテンツを公開しました。'
+    ],
     event: {
       date: '2025年10月10日（金）',
       place: 'スペシャルページ',
       content: 'スペシャルコンテンツ公開'
     },
-    notes: ['公開期間は変更となる場合があります。']
+    notes: [
+      '公開期間は変更となる場合があります。'
+    ]
   }
 ]
 
@@ -381,22 +422,87 @@ const displayedNews = computed(() => {
 
 function openNewsDetail(news) {
   selectedNews.value = news
+
+  if (typeof window !== 'undefined') {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'auto'
+    })
+  }
 }
 
-function goBack() {
+function markSkipIntro() {
+  try {
+    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+    sessionStorage.setItem('atriSkipIntro', '1')
+    sessionStorage.setItem('introPlayed', 'true')
+  } catch {}
+}
+
+/**
+ * 新闻完整页右上角 BACK：
+ * 回到首页新闻模块，也就是 3 个新闻卡片 + MORE 的区域。
+ */
+async function goHomeNewsSection() {
   selectedNews.value = null
-  try {
-    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
-    sessionStorage.setItem('atriSkipIntro', '1')
-  } catch {}
+  markSkipIntro()
+
+  await router.push({
+    path: '/',
+    hash: '#news'
+  })
+
+  await nextTick()
+
+  requestAnimationFrame(() => {
+    const newsSection = document.getElementById('news')
+
+    if (newsSection) {
+      const oldHtmlBehavior = document.documentElement.style.scrollBehavior
+      const oldBodyBehavior = document.body.style.scrollBehavior
+
+      document.documentElement.style.scrollBehavior = 'auto'
+      document.body.style.scrollBehavior = 'auto'
+
+      const targetTop = newsSection.getBoundingClientRect().top + window.scrollY
+
+      window.scrollTo({
+        top: targetTop,
+        left: 0,
+        behavior: 'auto'
+      })
+
+      requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = oldHtmlBehavior
+        document.body.style.scrollBehavior = oldBodyBehavior
+      })
+    }
+  })
 }
 
-function goHome() {
-  try {
-    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
-    sessionStorage.setItem('atriSkipIntro', '1')
-  } catch {}
-  window.location.href = '/'
+/**
+ * 详情页右上角 ×：
+ * 只关闭详情，回到当前 /news 的 12 个新闻展示框。
+ */
+async function closeDetailToNewsList() {
+  selectedNews.value = null
+  markSkipIntro()
+
+  await nextTick()
+
+  if (!props.showFullPage) {
+    await router.push('/news')
+    return
+  }
+
+  if (typeof window !== 'undefined') {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'auto'
+    })
+  }
 }
 </script>
 
@@ -440,18 +546,101 @@ function goHome() {
   opacity: var(--bubble-opacity);
 }
 
-.news-detail-bubbles span:nth-child(1) { --bubble-size: 92px; --bubble-left: 6%; --bubble-duration: 16s; --bubble-delay: -4s; --bubble-opacity: 0.72; }
-.news-detail-bubbles span:nth-child(2) { --bubble-size: 152px; --bubble-left: 15%; --bubble-duration: 21s; --bubble-delay: -17s; --bubble-opacity: 0.54; }
-.news-detail-bubbles span:nth-child(3) { --bubble-size: 62px; --bubble-left: 24%; --bubble-duration: 14s; --bubble-delay: -9s; --bubble-opacity: 0.68; }
-.news-detail-bubbles span:nth-child(4) { --bubble-size: 118px; --bubble-left: 34%; --bubble-duration: 19s; --bubble-delay: -2s; --bubble-opacity: 0.64; }
-.news-detail-bubbles span:nth-child(5) { --bubble-size: 176px; --bubble-left: 47%; --bubble-duration: 24s; --bubble-delay: -21s; --bubble-opacity: 0.48; }
-.news-detail-bubbles span:nth-child(6) { --bubble-size: 78px; --bubble-left: 57%; --bubble-duration: 15s; --bubble-delay: -12s; --bubble-opacity: 0.7; }
-.news-detail-bubbles span:nth-child(7) { --bubble-size: 136px; --bubble-left: 66%; --bubble-duration: 20s; --bubble-delay: -7s; --bubble-opacity: 0.58; }
-.news-detail-bubbles span:nth-child(8) { --bubble-size: 88px; --bubble-left: 76%; --bubble-duration: 17s; --bubble-delay: -15s; --bubble-opacity: 0.7; }
-.news-detail-bubbles span:nth-child(9) { --bubble-size: 190px; --bubble-left: 84%; --bubble-duration: 26s; --bubble-delay: -25s; --bubble-opacity: 0.46; }
-.news-detail-bubbles span:nth-child(10) { --bubble-size: 58px; --bubble-left: 91%; --bubble-duration: 13s; --bubble-delay: -5s; --bubble-opacity: 0.76; }
-.news-detail-bubbles span:nth-child(11) { --bubble-size: 110px; --bubble-left: 3%; --bubble-duration: 18s; --bubble-delay: -23s; --bubble-opacity: 0.58; }
-.news-detail-bubbles span:nth-child(12) { --bubble-size: 72px; --bubble-left: 72%; --bubble-duration: 14s; --bubble-delay: -1s; --bubble-opacity: 0.72; }
+.news-detail-bubbles span:nth-child(1) {
+  --bubble-size: 92px;
+  --bubble-left: 6%;
+  --bubble-duration: 16s;
+  --bubble-delay: -4s;
+  --bubble-opacity: 0.72;
+}
+
+.news-detail-bubbles span:nth-child(2) {
+  --bubble-size: 152px;
+  --bubble-left: 15%;
+  --bubble-duration: 21s;
+  --bubble-delay: -17s;
+  --bubble-opacity: 0.54;
+}
+
+.news-detail-bubbles span:nth-child(3) {
+  --bubble-size: 62px;
+  --bubble-left: 24%;
+  --bubble-duration: 14s;
+  --bubble-delay: -9s;
+  --bubble-opacity: 0.68;
+}
+
+.news-detail-bubbles span:nth-child(4) {
+  --bubble-size: 118px;
+  --bubble-left: 34%;
+  --bubble-duration: 19s;
+  --bubble-delay: -2s;
+  --bubble-opacity: 0.64;
+}
+
+.news-detail-bubbles span:nth-child(5) {
+  --bubble-size: 176px;
+  --bubble-left: 47%;
+  --bubble-duration: 24s;
+  --bubble-delay: -21s;
+  --bubble-opacity: 0.48;
+}
+
+.news-detail-bubbles span:nth-child(6) {
+  --bubble-size: 78px;
+  --bubble-left: 57%;
+  --bubble-duration: 15s;
+  --bubble-delay: -12s;
+  --bubble-opacity: 0.7;
+}
+
+.news-detail-bubbles span:nth-child(7) {
+  --bubble-size: 136px;
+  --bubble-left: 66%;
+  --bubble-duration: 20s;
+  --bubble-delay: -7s;
+  --bubble-opacity: 0.58;
+}
+
+.news-detail-bubbles span:nth-child(8) {
+  --bubble-size: 88px;
+  --bubble-left: 76%;
+  --bubble-duration: 17s;
+  --bubble-delay: -15s;
+  --bubble-opacity: 0.7;
+}
+
+.news-detail-bubbles span:nth-child(9) {
+  --bubble-size: 190px;
+  --bubble-left: 84%;
+  --bubble-duration: 26s;
+  --bubble-delay: -25s;
+  --bubble-opacity: 0.46;
+}
+
+.news-detail-bubbles span:nth-child(10) {
+  --bubble-size: 58px;
+  --bubble-left: 91%;
+  --bubble-duration: 13s;
+  --bubble-delay: -5s;
+  --bubble-opacity: 0.76;
+}
+
+.news-detail-bubbles span:nth-child(11) {
+  --bubble-size: 110px;
+  --bubble-left: 3%;
+  --bubble-duration: 18s;
+  --bubble-delay: -23s;
+  --bubble-opacity: 0.58;
+}
+
+.news-detail-bubbles span:nth-child(12) {
+  --bubble-size: 72px;
+  --bubble-left: 72%;
+  --bubble-duration: 14s;
+  --bubble-delay: -1s;
+  --bubble-opacity: 0.72;
+}
 
 @keyframes news-bubble-float {
   0% {
@@ -483,6 +672,13 @@ function goHome() {
 
   50% {
     filter: saturate(1.25) brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .news-detail-bubbles span {
+    animation: none;
+    transform: translateY(-22vh);
   }
 }
 </style>

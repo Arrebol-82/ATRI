@@ -3,6 +3,7 @@ import { gsap } from 'gsap'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import CharactersSection from '~/components/CharactersSection.vue'
 import HomeSidebar from '~/components/HomeSidebar.vue'
+import Footer from '~/components/Footer.vue'
 import { homeNavItems } from '~/constants/navigation'
 import NewsSection from './news.vue'
 import ScenesSection from './scenes.vue'
@@ -22,20 +23,27 @@ const SKIP_HOME_INTRO_KEY = 'atriSkipHomeIntroOnce'
 const introVisible = ref(false)
 const showVideo = ref(false)
 const introFinished = ref(false)
+const bootMaskVisible = ref(true)
+
 const introScreen = ref(null)
 const introVideoLayer = ref(null)
 const introCard = ref(null)
 const introTitle = ref(null)
 const introClickCursor = ref(null)
 const openingVideo = ref(null)
+
 const heroVisual = ref(null)
 const heroTitleImage = ref(null)
 const nextSlideImage = ref(null)
 const thumbButtons = ref([])
+
 const activeIndex = ref(0)
 const currentImage = ref(heroItems[0].image)
 const nextImage = ref('')
 const isSwitching = ref(false)
+
+const menuOpen = ref(false)
+const isMenuIconVisible = ref(false)
 
 let introTimeline
 let videoCall
@@ -43,6 +51,7 @@ let playCall
 let finishTween
 let slideTween
 let introPointer = { x: 0, y: 0 }
+let menuIconRaf = 0
 
 function getSessionItem(key) {
   try {
@@ -52,20 +61,10 @@ function getSessionItem(key) {
   }
 }
 
-function setSessionItem(key, value) {
-  try {
-    sessionStorage.setItem(key, value)
-  } catch {
-    // Storage can fail in private contexts. The page still works without it.
-  }
-}
-
 function removeSessionItem(key) {
   try {
     sessionStorage.removeItem(key)
-  } catch {
-    // Storage can fail in private contexts. The page still works without it.
-  }
+  } catch {}
 }
 
 function getNavigationType() {
@@ -74,25 +73,68 @@ function getNavigationType() {
 }
 
 function shouldPlayHomeIntro() {
-  const navType = getNavigationType()
-  
-  if (navType === 'reload') {
-    removeSessionItem(SKIP_HOME_INTRO_KEY)
-    removeSessionItem('atriSkipIntro')
-    return true
-  }
+  if (typeof window === 'undefined') return false
 
-  if (navType === 'back_forward') {
+  if (window.__ATRI_HOME_INTRO_PLAYED__) {
     return false
   }
 
-  if (getSessionItem(SKIP_HOME_INTRO_KEY) === '1' || getSessionItem('atriSkipIntro') === '1') {
-    removeSessionItem(SKIP_HOME_INTRO_KEY)
-    removeSessionItem('atriSkipIntro')
-    return false
+  const shouldSkipFromNavigation =
+    getNavigationType() === 'back_forward' ||
+    getSessionItem(SKIP_HOME_INTRO_KEY) === '1' ||
+    getSessionItem('atriSkipIntro') === '1' ||
+    getSessionItem('introPlayed') === 'true'
+
+  window.__ATRI_HOME_INTRO_PLAYED__ = true
+
+  removeSessionItem(SKIP_HOME_INTRO_KEY)
+  removeSessionItem('atriSkipIntro')
+  removeSessionItem('introPlayed')
+  removeSessionItem(HOME_INTRO_PLAYED_KEY)
+
+  return !shouldSkipFromNavigation
+}
+
+function updateMenuIconVisible() {
+  if (typeof window === 'undefined') return
+
+  const storySection = document.getElementById('story')
+
+  if (!storySection) {
+    isMenuIconVisible.value = false
+    menuOpen.value = false
+    return
   }
 
-  return getSessionItem(HOME_INTRO_PLAYED_KEY) !== '1'
+  // 以 story 区块顶部作为分界线：
+  // 首页首屏隐藏，滚到 story 后显示，继续往下保持显示。
+  const shouldShow = window.scrollY >= storySection.offsetTop
+
+  isMenuIconVisible.value = shouldShow
+
+  // 回到首页时，菜单图标隐藏，同时关闭菜单层
+  if (!shouldShow) {
+    menuOpen.value = false
+  }
+}
+
+function handleMenuIconScroll() {
+  if (typeof window === 'undefined') return
+  if (menuIconRaf) return
+
+  menuIconRaf = window.requestAnimationFrame(() => {
+    menuIconRaf = 0
+    updateMenuIconVisible()
+  })
+}
+
+function toggleMenu() {
+  if (!isMenuIconVisible.value) return
+  menuOpen.value = !menuOpen.value
+}
+
+function closeMenu() {
+  menuOpen.value = false
 }
 
 function setThumbButtonRef(element, index) {
@@ -125,8 +167,8 @@ function syncThumbButtons() {
 function enterHome() {
   if (introFinished.value) return
 
-  setSessionItem(HOME_INTRO_PLAYED_KEY, '1')
   introFinished.value = true
+
   openingVideo.value?.pause()
   introTimeline?.kill()
   videoCall?.kill()
@@ -138,6 +180,7 @@ function enterHome() {
     ease: 'power1.out',
     onComplete: () => {
       introVisible.value = false
+      updateMenuIconVisible()
     }
   })
 }
@@ -148,6 +191,7 @@ function handleIntroClick() {
 
 function handleIntroMousemove(event) {
   introPointer = { x: event.clientX, y: event.clientY }
+
   if (!showVideo.value || !introClickCursor.value) return
 
   gsap.to(introClickCursor.value, {
@@ -208,6 +252,7 @@ async function selectHero(index) {
   await nextTick()
 
   slideTween?.kill()
+
   gsap.set(nextSlideImage.value, {
     clipPath: 'inset(0 100% 0 0)',
     scale: 1.08,
@@ -230,11 +275,15 @@ async function selectHero(index) {
       clipPath: 'inset(0 0% 0 0)',
       duration: 1.05
     })
-    .to(nextSlideImage.value, {
-      scale: 1.04,
-      filter: 'brightness(1)',
-      duration: 1.2
-    }, 0)
+    .to(
+      nextSlideImage.value,
+      {
+        scale: 1.04,
+        filter: 'brightness(1)',
+        duration: 1.2
+      },
+      0
+    )
 }
 
 onMounted(async () => {
@@ -243,10 +292,35 @@ onMounted(async () => {
     y: window.innerHeight / 2
   }
 
-  gsap.set(heroVisual.value, { '--move-x': '0px', '--move-y': '0px' })
+  gsap.set(heroVisual.value, {
+    '--move-x': '0px',
+    '--move-y': '0px'
+  })
+
+  isMenuIconVisible.value = false
+  menuOpen.value = false
+
+  window.addEventListener('scroll', handleMenuIconScroll, { passive: true })
+  window.addEventListener('resize', handleMenuIconScroll)
+
+  await nextTick()
+
+  // 检查 URL 中是否有锚点，判断是否需要滚动到指定位置
+  const hasHash = typeof window !== 'undefined' && window.location.hash
+  const validSections = ['#story', '#characters', '#scenes', '#news']
+  const shouldScrollToHash = hasHash && validSections.includes(hasHash)
+  const scrollToNews = getSessionItem('scrollToNews') === '1'
+
+  // 如果没有有效的锚点且不跳转到新闻，重置滚动位置到顶部
+  if (!shouldScrollToHash && !scrollToNews && typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }
+
+  requestAnimationFrame(() => {
+    updateMenuIconVisible()
+  })
 
   if (shouldPlayHomeIntro()) {
-    setSessionItem(HOME_INTRO_PLAYED_KEY, '1')
     introVisible.value = true
 
     await nextTick()
@@ -254,12 +328,17 @@ onMounted(async () => {
     gsap.set(introClickCursor.value, introPointer)
     gsap.set(introVideoLayer.value, { opacity: 0 })
     gsap.set(introCard.value, { yPercent: 100 })
+
     gsap.set(introTitle.value, {
       xPercent: -50,
       yPercent: -45,
       opacity: 0,
       backgroundPosition: '100% 0'
     })
+
+    bootMaskVisible.value = false
+
+    await nextTick()
 
     introTimeline = gsap.timeline()
 
@@ -269,40 +348,63 @@ onMounted(async () => {
         duration: 1.2,
         ease: 'power4.out'
       })
-      .to(introTitle.value, {
-        opacity: 1,
-        yPercent: -50,
-        duration: 0.7,
-        ease: 'power1.out'
-      }, 0.9)
-      .to(introTitle.value, {
-        backgroundPosition: '0% 0',
-        duration: 1.1,
-        ease: 'power1.inOut'
-      }, 1.25)
-      .to(introTitle.value, {
-        opacity: 0,
-        duration: 0.4,
-        ease: 'power1.out'
-      }, 2.8)
-      .to(introCard.value, {
-        yPercent: -100,
-        duration: 0.9,
-        ease: 'power2.inOut'
-      }, 3)
+      .to(
+        introTitle.value,
+        {
+          opacity: 1,
+          yPercent: -50,
+          duration: 0.7,
+          ease: 'power1.out'
+        },
+        0.9
+      )
+      .to(
+        introTitle.value,
+        {
+          backgroundPosition: '0% 0',
+          duration: 1.1,
+          ease: 'power1.inOut'
+        },
+        1.25
+      )
+      .to(
+        introTitle.value,
+        {
+          opacity: 0,
+          duration: 0.4,
+          ease: 'power1.out'
+        },
+        2.8
+      )
+      .to(
+        introCard.value,
+        {
+          yPercent: -100,
+          duration: 0.9,
+          ease: 'power2.inOut'
+        },
+        3
+      )
 
     videoCall = gsap.delayedCall(3, () => {
       showVideo.value = true
+
       gsap.set(introClickCursor.value, introPointer)
-      gsap.fromTo(introClickCursor.value, {
-        autoAlpha: 0,
-        scale: 0.8
-      }, {
-        autoAlpha: 1,
-        scale: 1,
-        duration: 0.28,
-        ease: 'power2.out'
-      })
+
+      gsap.fromTo(
+        introClickCursor.value,
+        {
+          autoAlpha: 0,
+          scale: 0.8
+        },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.28,
+          ease: 'power2.out'
+        }
+      )
+
       gsap.to(introVideoLayer.value, {
         opacity: 1,
         duration: 0.2,
@@ -314,14 +416,26 @@ onMounted(async () => {
       openingVideo.value?.play().catch(() => {})
     })
   } else {
-    if (getSessionItem('scrollToNews') === '1') {
+    bootMaskVisible.value = false
+
+    if (scrollToNews) {
       removeSessionItem('scrollToNews')
+
       setTimeout(() => {
         const newsSection = document.getElementById('news')
+
         if (newsSection) {
           newsSection.scrollIntoView({ behavior: 'smooth' })
         }
       }, 500)
+    } else if (shouldScrollToHash) {
+      // 如果有有效锚点，滚动到对应位置
+      setTimeout(() => {
+        const targetSection = document.querySelector(hasHash)
+        if (targetSection) {
+          targetSection.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
     }
   }
 
@@ -334,11 +448,20 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleMenuIconScroll)
+  window.removeEventListener('resize', handleMenuIconScroll)
+
+  if (menuIconRaf) {
+    window.cancelAnimationFrame(menuIconRaf)
+    menuIconRaf = 0
+  }
+
   introTimeline?.kill()
   videoCall?.kill()
   playCall?.kill()
   finishTween?.kill()
   slideTween?.kill()
+
   gsap.killTweensOf(introClickCursor.value)
 })
 </script>
@@ -346,9 +469,15 @@ onBeforeUnmount(() => {
 <template>
   <main class="min-h-screen overflow-x-hidden bg-white text-[#102a3a]">
     <div
+      v-if="bootMaskVisible"
+      class="boot-mask fixed inset-0 z-[10000] h-screen w-full bg-white"
+      aria-hidden="true"
+    />
+
+    <div
       v-if="introVisible"
       ref="introScreen"
-      class="intro-screen fixed inset-0 z-[9999] h-screen w-full overflow-hidden bg-[#f5efe3]"
+      class="intro-screen fixed inset-0 z-[9999] h-screen w-full overflow-hidden bg-white"
       :class="{
         'show-video cursor-none': showVideo,
         'is-finished pointer-events-none invisible opacity-0': introFinished
@@ -369,7 +498,10 @@ onBeforeUnmount(() => {
         </video>
       </div>
 
-      <div ref="introCard" class="intro-card absolute inset-0 z-[2] h-full w-full bg-[#c8ebff]" />
+      <div
+        ref="introCard"
+        class="intro-card absolute inset-0 z-[2] h-full w-full bg-[#c8ebff]"
+      />
 
       <div
         ref="introTitle"
@@ -386,6 +518,78 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <Transition name="menu-fade">
+      <button
+        v-if="isMenuIconVisible"
+        type="button"
+        class="menu-toggle fixed right-8 top-8 z-[10001] flex h-12 w-12 items-center justify-center text-[#102a3a]"
+        :aria-label="menuOpen ? '关闭菜单' : '打开菜单'"
+        :aria-expanded="menuOpen"
+        @click="toggleMenu"
+      >
+        <span
+          v-if="!menuOpen"
+          class="menu-lines"
+          aria-hidden="true"
+        >
+          <span />
+          <span />
+          <span />
+        </span>
+
+        <span
+          v-else
+          class="menu-close"
+          aria-hidden="true"
+        >
+          <span />
+          <span />
+        </span>
+      </button>
+    </Transition>
+
+    <Transition name="menu-layer">
+      <div
+        v-if="menuOpen"
+        class="menu-layer fixed inset-0 z-[10000]"
+      >
+        <button
+          type="button"
+          class="absolute inset-0 h-full w-full bg-white/30 backdrop-blur-[4px]"
+          aria-label="关闭菜单"
+          @click="closeMenu"
+        />
+
+        <aside
+          class="absolute right-0 top-0 flex h-screen w-[240px] max-w-[88vw] flex-col border-l border-[rgba(120,180,210,0.28)] bg-white/95 px-6 pb-7 pt-[34px] shadow-[-18px_0_50px_rgba(80,130,160,0.08)]"
+        >
+          <div class="mb-[34px] pr-12">
+            <h2 class="font-serif text-[42px] font-normal tracking-[0.14em] text-[#102a3a]">
+              ATRI
+            </h2>
+
+            <p class="mt-1.5 text-xs tracking-[0.08em] text-[#102a3a]/60">
+              Blue Memory Store
+            </p>
+          </div>
+
+          <div @click="closeMenu">
+            <HomeSidebar :items="homeNavItems" />
+          </div>
+
+          <div class="mt-auto border-t border-[rgba(120,180,210,0.26)] pt-[18px]">
+            <p class="text-[11px] tracking-[0.08em] text-[#102a3a]/60">
+              Tech Festival Project
+            </p>
+
+            <span class="mt-1.5 block font-serif text-xl text-[#102a3a]">
+              2026
+            </span>
+          </div>
+        </aside>
+      </div>
+    </Transition>
+
     <section
       class="relative grid h-screen w-full grid-cols-1 overflow-hidden bg-white lg:grid-cols-[1fr_240px]"
       @mousemove="handleMousemove"
@@ -398,7 +602,7 @@ onBeforeUnmount(() => {
         <img
           :src="currentImage"
           alt=""
-          class="absolute inset-0 block h-full w-full scale-[1.04] object-cover object-center transition-transform duration-200 ease-out will-change-transform hero-parallax"
+          class="hero-parallax absolute inset-0 block h-full w-full scale-[1.04] object-cover object-center transition-transform duration-200 ease-out will-change-transform"
         >
 
         <img
@@ -428,7 +632,11 @@ onBeforeUnmount(() => {
             @mouseleave="animateThumb(index, index === activeIndex)"
             @click="selectHero(index)"
           >
-            <img :src="item.thumb" alt="" class="block h-full w-full rounded-[10px] object-cover">
+            <img
+              :src="item.thumb"
+              alt=""
+              class="block h-full w-full rounded-[10px] object-cover"
+            >
           </button>
         </div>
       </div>
@@ -438,6 +646,7 @@ onBeforeUnmount(() => {
           <h1 class="font-serif text-[42px] font-normal tracking-[0.14em] text-[#102a3a]">
             ATRI
           </h1>
+
           <p class="mt-1.5 text-xs tracking-[0.08em] text-[#102a3a]/60">
             Blue Memory Store
           </p>
@@ -449,7 +658,10 @@ onBeforeUnmount(() => {
           <p class="text-[11px] tracking-[0.08em] text-[#102a3a]/60">
             Tech Festival Project
           </p>
-          <span class="mt-1.5 block font-serif text-xl text-[#102a3a]">2026</span>
+
+          <span class="mt-1.5 block font-serif text-xl text-[#102a3a]">
+            2026
+          </span>
         </div>
       </aside>
     </section>
@@ -469,6 +681,8 @@ onBeforeUnmount(() => {
     <section id="news">
       <NewsSection :showFullPage="false" />
     </section>
+
+    <Footer />
   </main>
 </template>
 
@@ -487,4 +701,99 @@ onBeforeUnmount(() => {
   clip-path: inset(0 0 0 0);
 }
 
+.boot-mask {
+  pointer-events: auto;
+}
+
+.menu-toggle {
+  border: 0;
+  background: transparent;
+}
+
+.menu-lines {
+  display: flex;
+  width: 30px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.menu-lines span {
+  display: block;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.menu-lines span:nth-child(1) {
+  width: 30px;
+}
+
+.menu-lines span:nth-child(2) {
+  width: 26px;
+}
+
+.menu-lines span:nth-child(3) {
+  width: 22px;
+}
+
+.menu-close {
+  position: relative;
+  display: block;
+  height: 32px;
+  width: 32px;
+}
+
+.menu-close span {
+  position: absolute;
+  left: 3px;
+  top: 15px;
+  display: block;
+  height: 1.5px;
+  width: 30px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.menu-close span:first-child {
+  transform: rotate(45deg);
+}
+
+.menu-close span:last-child {
+  transform: rotate(-45deg);
+}
+
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.menu-fade-enter-to,
+.menu-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.menu-layer-enter-active,
+.menu-layer-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.menu-layer-enter-from,
+.menu-layer-leave-to {
+  opacity: 0;
+}
+
+.menu-layer-enter-to,
+.menu-layer-leave-from {
+  opacity: 1;
+}
 </style>

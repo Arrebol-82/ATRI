@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
 const sideCaptionText = 'ATRIMyDearMoments'
@@ -15,8 +15,17 @@ const router = useRouter()
 const route = useRoute()
 
 const MERCHANDISE_RETURN_TARGET_KEY = 'atriMerchandiseReturnTarget'
+const MERCHANDISE_PRODUCTS_STORAGE_KEY = 'atriMerchandiseProductsCache'
+const MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY = 'atriMerchandiseProductsCacheTime'
+const MERCHANDISE_PRODUCTS_CACHE_MAX_AGE = 1000 * 60 * 60 * 24
 
-const { data: products, pending, error } = await useFetch('/api/merchandise')
+const merchandiseCache = useState('merchandise-products-cache', () => [])
+const merchandisePreloaded = useState('merchandise-products-preloaded', () => false)
+const merchandisePreloading = useState('merchandise-products-preloading', () => false)
+
+const products = computed(() => merchandiseCache.value)
+const pending = ref(!merchandiseCache.value.length)
+const error = ref(null)
 
 const checkoutSteps = [
   { key: 'order', label: '下单' },
@@ -52,6 +61,7 @@ const totalPriceDisplay = computed(() => {
 
 const canConfirmOrder = computed(() => customerName.value.trim() && deliveryAddress.value.trim())
 const cardNumberDigits = computed(() => cardNumber.value.replace(/\D/g, ''))
+
 const canCompletePayment = computed(() => {
   if (paymentMethod.value !== 'card') {
     return true
@@ -65,6 +75,117 @@ watch(paymentMethod, (method) => {
     clearSensitivePayment()
   }
 })
+
+watch(merchandiseCache, (value) => {
+  if (Array.isArray(value) && value.length) {
+    pending.value = false
+    error.value = null
+  }
+})
+
+onMounted(() => {
+  restoreMerchandiseProductsFromStorage()
+  loadMerchandiseProducts()
+})
+
+function readMerchandiseProductsFromStorage() {
+  if (!import.meta.client) {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_KEY)
+    const savedAt = Number(localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY) || 0)
+
+    if (!raw || !savedAt) {
+      return []
+    }
+
+    const isExpired = Date.now() - savedAt > MERCHANDISE_PRODUCTS_CACHE_MAX_AGE
+    if (isExpired) {
+      return []
+    }
+
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveMerchandiseProductsToStorage(productList) {
+  if (!import.meta.client || !Array.isArray(productList)) {
+    return
+  }
+
+  try {
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_KEY, JSON.stringify(productList))
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY, String(Date.now()))
+  } catch {
+    // localStorage 可能因为隐私模式或容量限制失败，失败时不影响页面正常显示。
+  }
+}
+
+function applyMerchandiseProducts(productList) {
+  const normalizedProducts = Array.isArray(productList) ? productList : []
+
+  merchandiseCache.value = normalizedProducts
+
+  if (normalizedProducts.length) {
+    merchandisePreloaded.value = true
+    pending.value = false
+    error.value = null
+    saveMerchandiseProductsToStorage(normalizedProducts)
+  }
+}
+
+function restoreMerchandiseProductsFromStorage() {
+  if (merchandiseCache.value.length) {
+    pending.value = false
+    error.value = null
+    return
+  }
+
+  const cachedProducts = readMerchandiseProductsFromStorage()
+
+  if (cachedProducts.length) {
+    merchandiseCache.value = cachedProducts
+    merchandisePreloaded.value = true
+    pending.value = false
+    error.value = null
+  }
+}
+
+async function loadMerchandiseProducts() {
+  const hasVisibleProducts = merchandiseCache.value.length > 0
+
+  if (hasVisibleProducts) {
+    pending.value = false
+    error.value = null
+  } else {
+    pending.value = true
+    error.value = null
+  }
+
+  if (merchandisePreloading.value) {
+    return
+  }
+
+  try {
+    merchandisePreloading.value = true
+    const data = await $fetch('/api/merchandise')
+
+    applyMerchandiseProducts(data)
+  } catch (err) {
+    if (!hasVisibleProducts) {
+      error.value = err
+      merchandisePreloaded.value = false
+    }
+  } finally {
+    pending.value = false
+    merchandisePreloading.value = false
+  }
+}
 
 function clearSensitivePayment() {
   cardNumber.value = ''
@@ -140,6 +261,7 @@ function skipHomeIntroOnce() {
   try {
     sessionStorage.setItem('atriSkipIntro', '1')
     sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+    sessionStorage.setItem('introPlayed', 'true')
   } catch {
     // The home page can still load normally if session storage is unavailable.
   }
@@ -219,7 +341,7 @@ onBeforeRouteLeave((to) => {
 </script>
 
 <template>
-  <main class="relative min-h-screen overflow-x-hidden bg-white px-6 py-8 text-[#102a3a] md:px-12 lg:px-[7.2vw]">
+  <main class="merchandise-page relative min-h-screen overflow-x-hidden bg-white px-6 py-8 text-[#102a3a] md:px-12 lg:px-[7.2vw]">
     <div class="side-caption side-caption-left" aria-hidden="true">
       <div class="side-caption-track side-caption-track-up">
         <span v-for="index in 12" :key="`left-${index}`">{{ sideCaptionText }}</span>
@@ -306,6 +428,7 @@ onBeforeRouteLeave((to) => {
                 :src="selectedProduct.imageUrl"
                 :alt="selectedProduct.name"
                 class="h-full w-full object-contain"
+                decoding="async"
               >
             </div>
 
@@ -515,7 +638,6 @@ onBeforeRouteLeave((to) => {
             完成
           </button>
         </div>
-
       </section>
     </div>
 
@@ -542,9 +664,35 @@ onBeforeRouteLeave((to) => {
       </div>
 
       <div class="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <div v-if="pending" class="col-span-full py-20 text-center font-bold text-[#4fb0cf]">
-          正在连接数据库...
-        </div>
+        <template v-if="pending">
+          <article
+            v-for="index in 6"
+            :key="`skeleton-${index}`"
+            class="product-card pointer-events-none flex min-h-[430px] flex-col rounded-[14px] border-2 border-b-[6px] border-l-[6px] border-[#d3eef4] bg-white p-6 shadow-[0_4px_14px_rgba(91,174,201,0.08)]"
+          >
+            <div class="flex aspect-square items-center justify-center overflow-hidden rounded-[9px] border-2 border-[#dff2f6] bg-[#f7fcfe] p-3">
+              <div class="h-full w-full animate-pulse rounded-[8px] bg-[#e8f9ff]"></div>
+            </div>
+
+            <div class="mt-4 flex flex-1 flex-col px-3 py-4">
+              <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-[#b7e8f4]"></span>
+                <span class="h-4 w-24 animate-pulse rounded-full bg-[#d7f3fb]"></span>
+              </div>
+
+              <div class="mt-5 space-y-3">
+                <div class="h-5 w-full animate-pulse rounded-full bg-[#e8f9ff]"></div>
+                <div class="h-5 w-4/5 animate-pulse rounded-full bg-[#e8f9ff]"></div>
+                <div class="h-5 w-2/3 animate-pulse rounded-full bg-[#e8f9ff]"></div>
+              </div>
+
+              <div class="mt-auto pt-5">
+                <div class="h-4 w-32 animate-pulse rounded-full bg-[#d7f3fb]"></div>
+                <div class="mt-5 h-11 w-full animate-pulse rounded-full bg-[#b7e8f4]"></div>
+              </div>
+            </div>
+          </article>
+        </template>
 
         <div v-else-if="error" class="col-span-full py-20 text-center font-bold text-[#d45b6a]">
           商品数据加载失败
@@ -567,6 +715,7 @@ onBeforeRouteLeave((to) => {
               :alt="product.name"
               class="h-full w-full object-contain"
               loading="lazy"
+              decoding="async"
             >
           </div>
 
@@ -592,31 +741,7 @@ onBeforeRouteLeave((to) => {
       </div>
     </section>
 
-    <section class="relative z-10 mx-auto mt-16 max-w-[1120px]">
-      <div class="nav-footer relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#fef7ff] to-white p-8">
-        <div class="nav-footer-pattern absolute inset-0 opacity-40" aria-hidden="true"></div>
-        
-        <div class="relative flex items-center justify-between">
-          <button class="nav-footer-btn nav-footer-btn-prev flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-left"></span>
-            </span>
-            <span class="text-sm font-black tracking-[0.25em]">PREV</span>
-          </button>
 
-          <button class="nav-footer-btn nav-footer-btn-all text-sm font-black tracking-[0.35em] text-[#765a78] transition hover:text-pink-400">
-            VIEW ALL
-          </button>
-
-          <button class="nav-footer-btn nav-footer-btn-next flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
-            <span class="text-sm font-black tracking-[0.25em]">NEXT</span>
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-right"></span>
-            </span>
-          </button>
-        </div>
-      </div>
-    </section>
   </main>
 </template>
 
@@ -683,21 +808,21 @@ onBeforeRouteLeave((to) => {
 
 @keyframes side-caption-up {
   from {
-    transform: translate(-50%, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 
   to {
-    transform: translate(-50%, -50%);
+    transform: translate3d(-50%, -50%, 0);
   }
 }
 
 @keyframes side-caption-down {
   from {
-    transform: translate(-50%, -50%);
+    transform: translate3d(-50%, -50%, 0);
   }
 
   to {
-    transform: translate(-50%, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -776,6 +901,7 @@ onBeforeRouteLeave((to) => {
   padding: 0 18px 0 15px;
   box-shadow: 0 14px 34px rgba(79, 176, 207, 0.14);
   backdrop-filter: blur(10px);
+  will-change: transform;
   transition:
     background-color 0.32s ease,
     border-color 0.32s ease,
@@ -879,26 +1005,23 @@ onBeforeRouteLeave((to) => {
 .product-card {
   transform-origin: center;
   transition:
-    background-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    background-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .product-card:hover {
   border-color: #79d7f0;
   background-color: #e8f9ff;
-  box-shadow: 0 16px 34px rgba(79, 176, 207, 0.2);
-  transform: scale(1.025);
-  transition-duration: 0.26s;
+  box-shadow: 0 14px 30px rgba(79, 176, 207, 0.18);
+  transform: translateY(-4px) scale(1.015);
 }
 
 .product-card:focus-visible {
   outline: 4px solid rgba(121, 215, 240, 0.72);
   outline-offset: 4px;
 }
-
-
 
 .checkout-dialog {
   isolation: isolate;
@@ -1078,7 +1201,9 @@ onBeforeRouteLeave((to) => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .checkout-bubbles span {
+  .checkout-bubbles span,
+  .side-caption-track-up,
+  .side-caption-track-down {
     animation: none;
     transform: translateY(-22vh);
   }
@@ -1369,79 +1494,4 @@ onBeforeRouteLeave((to) => {
   }
 }
 
-.nav-footer-pattern {
-  background-image: radial-gradient(circle, #ffcbdb 0 2px, transparent 3px);
-  background-size: 32px 32px;
-}
-
-.nav-footer-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.nav-footer-arrow-left {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-left::before,
-.nav-footer-arrow-left::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-left::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-left::after {
-  top: 4px;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-left: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(45deg);
-}
-
-.nav-footer-arrow-right {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-right::before,
-.nav-footer-arrow-right::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-right::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-right::after {
-  top: 4px;
-  right: 0;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(-45deg);
-}
 </style>

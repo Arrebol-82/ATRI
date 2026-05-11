@@ -1,8 +1,140 @@
 <script setup>
+import { onMounted } from 'vue'
+
 defineProps({
   items: {
     type: Array,
     required: true
+  }
+})
+
+const MERCHANDISE_PRODUCTS_STORAGE_KEY = 'atriMerchandiseProductsCache'
+const MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY = 'atriMerchandiseProductsCacheTime'
+const MERCHANDISE_PRODUCTS_CACHE_MAX_AGE = 1000 * 60 * 60 * 24
+
+const merchandiseCache = useState('merchandise-products-cache', () => [])
+const merchandisePreloaded = useState('merchandise-products-preloaded', () => false)
+const merchandisePreloading = useState('merchandise-products-preloading', () => false)
+
+let merchandisePreloadPromise = null
+
+function readMerchandiseProductsFromStorage() {
+  if (!import.meta.client) {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_KEY)
+    const savedAt = Number(localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY) || 0)
+
+    if (!raw || !savedAt) {
+      return []
+    }
+
+    const isExpired = Date.now() - savedAt > MERCHANDISE_PRODUCTS_CACHE_MAX_AGE
+
+    if (isExpired) {
+      return []
+    }
+
+    const parsed = JSON.parse(raw)
+
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveMerchandiseProductsToStorage(productList) {
+  if (!import.meta.client || !Array.isArray(productList)) {
+    return
+  }
+
+  try {
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_KEY, JSON.stringify(productList))
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY, String(Date.now()))
+  } catch {
+    // localStorage 可能因为隐私模式或容量限制失败，失败时不影响页面正常使用。
+  }
+}
+
+function restoreMerchandiseProductsFromStorage() {
+  if (merchandiseCache.value.length) {
+    merchandisePreloaded.value = true
+    return
+  }
+
+  const cachedProducts = readMerchandiseProductsFromStorage()
+
+  if (cachedProducts.length) {
+    merchandiseCache.value = cachedProducts
+    merchandisePreloaded.value = true
+  }
+}
+
+async function preloadMerchandise() {
+  if (!import.meta.client) {
+    return
+  }
+
+  restoreMerchandiseProductsFromStorage()
+
+  if (merchandisePreloaded.value || merchandiseCache.value.length) {
+    return
+  }
+
+  if (merchandisePreloadPromise) {
+    return merchandisePreloadPromise
+  }
+
+  merchandisePreloading.value = true
+
+  merchandisePreloadPromise = $fetch('/api/merchandise')
+    .then((data) => {
+      const productList = Array.isArray(data) ? data : []
+
+      merchandiseCache.value = productList
+      merchandisePreloaded.value = true
+
+      if (productList.length) {
+        saveMerchandiseProductsToStorage(productList)
+      }
+    })
+    .catch((error) => {
+      merchandisePreloaded.value = false
+      console.error('商品数据预加载失败：', error)
+    })
+    .finally(() => {
+      merchandisePreloading.value = false
+      merchandisePreloadPromise = null
+    })
+
+  return merchandisePreloadPromise
+}
+
+function handleNavPrepare(item) {
+  if (item?.to === '/merchandise') {
+    preloadMerchandise()
+  }
+}
+
+onMounted(() => {
+  if (!import.meta.client) {
+    return
+  }
+
+  restoreMerchandiseProductsFromStorage()
+
+  const preload = () => {
+    preloadMerchandise()
+  }
+
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(preload, {
+      timeout: 1800
+    })
+  } else {
+    setTimeout(preload, 1200)
   }
 })
 </script>
@@ -14,11 +146,23 @@ defineProps({
       :key="item.label"
       :to="item.to"
       class="sidebar-link group relative flex items-center gap-3 rounded-[14px] px-2.5 py-[11px] text-[#102a3a] transition duration-300 hover:-translate-x-1.5 hover:bg-[#a5e1fa]/20"
+      @mouseenter="handleNavPrepare(item)"
+      @focus="handleNavPrepare(item)"
+      @touchstart.passive="handleNavPrepare(item)"
+      @pointerdown="handleNavPrepare(item)"
     >
-      <span class="text-xs text-[#102a3a]/40">{{ String(index + 1).padStart(2, '0') }}</span>
+      <span class="text-xs text-[#102a3a]/40">
+        {{ String(index + 1).padStart(2, '0') }}
+      </span>
+
       <span>
-        <strong class="block text-sm font-bold tracking-[0.08em]">{{ item.label }}</strong>
-        <small class="mt-0.5 block text-[11px] text-[#102a3a]/55">{{ item.text }}</small>
+        <strong class="block text-sm font-bold tracking-[0.08em]">
+          {{ item.label }}
+        </strong>
+
+        <small class="mt-0.5 block text-[11px] text-[#102a3a]/55">
+          {{ item.text }}
+        </small>
       </span>
     </NuxtLink>
   </nav>
