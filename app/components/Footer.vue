@@ -53,7 +53,7 @@
             href="#contact"
             class="group flex items-center gap-3 rounded-full bg-[#182864] px-8 py-3 text-[12px] font-black tracking-[0.16em] text-white shadow-[0_10px_22px_rgba(24,40,100,0.22)] transition hover:-translate-y-1 hover:bg-sky-500"
           >
-            <span>企業様のお問い合わせ</span>
+            <span>Business Inquiries</span>
             <span class="transition group-hover:translate-x-1">→</span>
           </a>
         </div>

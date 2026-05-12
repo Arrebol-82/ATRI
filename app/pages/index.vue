@@ -95,6 +95,13 @@ function shouldPlayHomeIntro() {
   return !shouldSkipFromNavigation
 }
 
+function clearIntroSkipFlags() {
+  removeSessionItem(SKIP_HOME_INTRO_KEY)
+  removeSessionItem('atriSkipIntro')
+  removeSessionItem('introPlayed')
+  removeSessionItem(HOME_INTRO_PLAYED_KEY)
+}
+
 function updateMenuIconVisible() {
   if (typeof window === 'undefined') return
 
@@ -106,13 +113,10 @@ function updateMenuIconVisible() {
     return
   }
 
-  // 以 story 区块顶部作为分界线：
-  // 首页首屏隐藏，滚到 story 后显示，继续往下保持显示。
   const shouldShow = window.scrollY >= storySection.offsetTop
 
   isMenuIconVisible.value = shouldShow
 
-  // 回到首页时，菜单图标隐藏，同时关闭菜单层
   if (!shouldShow) {
     menuOpen.value = false
   }
@@ -286,6 +290,30 @@ async function selectHero(index) {
     )
 }
 
+function jumpToSectionImmediately(selector) {
+  if (typeof window === 'undefined') return false
+
+  const targetSection = document.querySelector(selector)
+
+  if (!targetSection) return false
+
+  const oldHtmlBehavior = document.documentElement.style.scrollBehavior
+  const oldBodyBehavior = document.body.style.scrollBehavior
+
+  document.documentElement.style.scrollBehavior = 'auto'
+  document.body.style.scrollBehavior = 'auto'
+
+  targetSection.scrollIntoView({
+    behavior: 'auto',
+    block: 'start'
+  })
+
+  document.documentElement.style.scrollBehavior = oldHtmlBehavior
+  document.body.style.scrollBehavior = oldBodyBehavior
+
+  return true
+}
+
 onMounted(async () => {
   introPointer = {
     x: window.innerWidth / 2,
@@ -305,137 +333,135 @@ onMounted(async () => {
 
   await nextTick()
 
-  // 检查 URL 中是否有锚点，判断是否需要滚动到指定位置
-  const hasHash = typeof window !== 'undefined' && window.location.hash
+  const hasHash = typeof window !== 'undefined' ? window.location.hash : ''
   const validSections = ['#story', '#characters', '#scenes', '#news']
-  const shouldScrollToHash = hasHash && validSections.includes(hasHash)
+  const shouldScrollToHash = Boolean(hasHash && validSections.includes(hasHash))
   const scrollToNews = getSessionItem('scrollToNews') === '1'
+  const shouldJumpImmediately = shouldScrollToHash || scrollToNews
+  const immediateTarget = shouldScrollToHash ? hasHash : '#news'
 
-  // 如果没有有效的锚点且不跳转到新闻，重置滚动位置到顶部
-  if (!shouldScrollToHash && !scrollToNews && typeof window !== 'undefined') {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  if (scrollToNews) {
+    removeSessionItem('scrollToNews')
   }
 
-  requestAnimationFrame(() => {
-    updateMenuIconVisible()
-  })
+  if (shouldJumpImmediately) {
+    clearIntroSkipFlags()
 
-  if (shouldPlayHomeIntro()) {
-    introVisible.value = true
+    requestAnimationFrame(() => {
+      jumpToSectionImmediately(immediateTarget)
 
-    await nextTick()
+      bootMaskVisible.value = false
 
-    gsap.set(introClickCursor.value, introPointer)
-    gsap.set(introVideoLayer.value, { opacity: 0 })
-    gsap.set(introCard.value, { yPercent: 100 })
-
-    gsap.set(introTitle.value, {
-      xPercent: -50,
-      yPercent: -45,
-      opacity: 0,
-      backgroundPosition: '100% 0'
-    })
-
-    bootMaskVisible.value = false
-
-    await nextTick()
-
-    introTimeline = gsap.timeline()
-
-    introTimeline
-      .to(introCard.value, {
-        yPercent: 0,
-        duration: 1.2,
-        ease: 'power4.out'
+      requestAnimationFrame(() => {
+        updateMenuIconVisible()
       })
-      .to(
-        introTitle.value,
-        {
-          opacity: 1,
-          yPercent: -50,
-          duration: 0.7,
-          ease: 'power1.out'
-        },
-        0.9
-      )
-      .to(
-        introTitle.value,
-        {
-          backgroundPosition: '0% 0',
-          duration: 1.1,
-          ease: 'power1.inOut'
-        },
-        1.25
-      )
-      .to(
-        introTitle.value,
-        {
-          opacity: 0,
-          duration: 0.4,
-          ease: 'power1.out'
-        },
-        2.8
-      )
-      .to(
-        introCard.value,
-        {
-          yPercent: -100,
-          duration: 0.9,
-          ease: 'power2.inOut'
-        },
-        3
-      )
-
-    videoCall = gsap.delayedCall(3, () => {
-      showVideo.value = true
-
-      gsap.set(introClickCursor.value, introPointer)
-
-      gsap.fromTo(
-        introClickCursor.value,
-        {
-          autoAlpha: 0,
-          scale: 0.8
-        },
-        {
-          autoAlpha: 1,
-          scale: 1,
-          duration: 0.28,
-          ease: 'power2.out'
-        }
-      )
-
-      gsap.to(introVideoLayer.value, {
-        opacity: 1,
-        duration: 0.2,
-        ease: 'power1.out'
-      })
-    })
-
-    playCall = gsap.delayedCall(3.9, () => {
-      openingVideo.value?.play().catch(() => {})
     })
   } else {
-    bootMaskVisible.value = false
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
 
-    if (scrollToNews) {
-      removeSessionItem('scrollToNews')
+    requestAnimationFrame(() => {
+      updateMenuIconVisible()
+    })
 
-      setTimeout(() => {
-        const newsSection = document.getElementById('news')
+    if (shouldPlayHomeIntro()) {
+      introVisible.value = true
 
-        if (newsSection) {
-          newsSection.scrollIntoView({ behavior: 'smooth' })
-        }
-      }, 500)
-    } else if (shouldScrollToHash) {
-      // 如果有有效锚点，滚动到对应位置
-      setTimeout(() => {
-        const targetSection = document.querySelector(hasHash)
-        if (targetSection) {
-          targetSection.scrollIntoView({ behavior: 'smooth' })
-        }
-      }, 100)
+      await nextTick()
+
+      gsap.set(introClickCursor.value, introPointer)
+      gsap.set(introVideoLayer.value, { opacity: 0 })
+      gsap.set(introCard.value, { yPercent: 100 })
+
+      gsap.set(introTitle.value, {
+        xPercent: -50,
+        yPercent: -45,
+        opacity: 0,
+        backgroundPosition: '100% 0'
+      })
+
+      bootMaskVisible.value = false
+
+      await nextTick()
+
+      introTimeline = gsap.timeline()
+
+      introTimeline
+        .to(introCard.value, {
+          yPercent: 0,
+          duration: 1.2,
+          ease: 'power4.out'
+        })
+        .to(
+          introTitle.value,
+          {
+            opacity: 1,
+            yPercent: -50,
+            duration: 0.7,
+            ease: 'power1.out'
+          },
+          0.9
+        )
+        .to(
+          introTitle.value,
+          {
+            backgroundPosition: '0% 0',
+            duration: 1.1,
+            ease: 'power1.inOut'
+          },
+          1.25
+        )
+        .to(
+          introTitle.value,
+          {
+            opacity: 0,
+            duration: 0.4,
+            ease: 'power1.out'
+          },
+          2.8
+        )
+        .to(
+          introCard.value,
+          {
+            yPercent: -100,
+            duration: 0.9,
+            ease: 'power2.inOut'
+          },
+          3
+        )
+
+      videoCall = gsap.delayedCall(3, () => {
+        showVideo.value = true
+
+        gsap.set(introClickCursor.value, introPointer)
+
+        gsap.fromTo(
+          introClickCursor.value,
+          {
+            autoAlpha: 0,
+            scale: 0.8
+          },
+          {
+            autoAlpha: 1,
+            scale: 1,
+            duration: 0.28,
+            ease: 'power2.out'
+          }
+        )
+
+        gsap.to(introVideoLayer.value, {
+          opacity: 1,
+          duration: 0.2,
+          ease: 'power1.out'
+        })
+      })
+
+      playCall = gsap.delayedCall(3.9, () => {
+        openingVideo.value?.play().catch(() => {})
+      })
+    } else {
+      bootMaskVisible.value = false
     }
   }
 
@@ -523,7 +549,7 @@ onBeforeUnmount(() => {
         v-if="isMenuIconVisible"
         type="button"
         class="menu-toggle fixed right-8 top-8 z-[10001] flex h-12 w-12 items-center justify-center text-[#102a3a]"
-        :aria-label="menuOpen ? '关闭菜单' : '打开菜单'"
+        :aria-label="menuOpen ? 'Close menu' : 'Open menu'"
         :aria-expanded="menuOpen"
         @click="toggleMenu"
       >
@@ -556,7 +582,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="absolute inset-0 h-full w-full bg-white/30 backdrop-blur-[4px]"
-          aria-label="关闭菜单"
+          aria-label="Close menu"
           @click="closeMenu"
         />
 
@@ -712,29 +738,15 @@ onBeforeUnmount(() => {
 
 .menu-lines {
   display: flex;
-  width: 30px;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 7px;
+  gap: 8px;
 }
 
 .menu-lines span {
   display: block;
-  height: 1.5px;
-  border-radius: 999px;
+  height: 1px;
+  width: 32px;
   background: currentColor;
-}
-
-.menu-lines span:nth-child(1) {
-  width: 30px;
-}
-
-.menu-lines span:nth-child(2) {
-  width: 26px;
-}
-
-.menu-lines span:nth-child(3) {
-  width: 22px;
 }
 
 .menu-close {
@@ -746,12 +758,11 @@ onBeforeUnmount(() => {
 
 .menu-close span {
   position: absolute;
-  left: 3px;
-  top: 15px;
+  left: 0;
+  top: 15.5px;
   display: block;
-  height: 1.5px;
-  width: 30px;
-  border-radius: 999px;
+  height: 1px;
+  width: 32px;
   background: currentColor;
 }
 

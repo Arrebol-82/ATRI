@@ -117,7 +117,7 @@
             </p>
           </div>
 
-          <!-- 这个 BACK 是新闻完整页返回首页新闻模块 -->
+          <!-- 新闻完整页右上角 BACK：直接回首页 NEWS 模块 -->
           <button
             v-if="showFullPage"
             class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
@@ -442,42 +442,15 @@ function markSkipIntro() {
 
 /**
  * 新闻完整页右上角 BACK：
- * 回到首页新闻模块，也就是 3 个新闻卡片 + MORE 的区域。
+ * 直接跳到首页 NEWS 模块，不再手动先回首页再二次滚动。
  */
 async function goHomeNewsSection() {
   selectedNews.value = null
   markSkipIntro()
 
-  await router.push({
+  await router.replace({
     path: '/',
     hash: '#news'
-  })
-
-  await nextTick()
-
-  requestAnimationFrame(() => {
-    const newsSection = document.getElementById('news')
-
-    if (newsSection) {
-      const oldHtmlBehavior = document.documentElement.style.scrollBehavior
-      const oldBodyBehavior = document.body.style.scrollBehavior
-
-      document.documentElement.style.scrollBehavior = 'auto'
-      document.body.style.scrollBehavior = 'auto'
-
-      const targetTop = newsSection.getBoundingClientRect().top + window.scrollY
-
-      window.scrollTo({
-        top: targetTop,
-        left: 0,
-        behavior: 'auto'
-      })
-
-      requestAnimationFrame(() => {
-        document.documentElement.style.scrollBehavior = oldHtmlBehavior
-        document.body.style.scrollBehavior = oldBodyBehavior
-      })
-    }
   })
 }
 

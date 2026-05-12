@@ -28,9 +28,9 @@ const pending = ref(!merchandiseCache.value.length)
 const error = ref(null)
 
 const checkoutSteps = [
-  { key: 'order', label: '下单' },
-  { key: 'confirm', label: '确认订单' },
-  { key: 'pay', label: '支付' }
+  { key: 'order', label: 'Order' },
+  { key: 'confirm', label: 'Confirm' },
+  { key: 'pay', label: 'Pay' }
 ]
 
 const currentStepIndex = computed(() => checkoutSteps.findIndex((step) => step.key === checkoutStep.value))
@@ -434,16 +434,16 @@ onBeforeRouteLeave((to) => {
 
             <div class="mt-6 grid gap-3 text-sm font-bold text-[#21485d] sm:grid-cols-3">
               <div class="checkout-fact">
-                <span>分类</span>
+                <span>Category</span>
                 <strong>{{ selectedProduct.category }}</strong>
               </div>
               <div class="checkout-fact">
-                <span>单价</span>
+                <span>Price</span>
                 <strong>{{ selectedProduct.priceDisplay }}</strong>
               </div>
               <div class="checkout-fact">
-                <span>库存</span>
-                <strong>可下单</strong>
+                <span>Stock</span>
+                <strong>Available</strong>
               </div>
             </div>
           </div>
@@ -451,10 +451,10 @@ onBeforeRouteLeave((to) => {
           <aside class="checkout-panel border-[4px] border-[#79d7f0] bg-white/88 p-5 shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
             <div v-if="checkoutStep === 'order'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">ORDER</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">下单</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Order</h3>
 
               <div class="mt-6 flex items-center justify-between gap-4 border-b border-[#c9edf8] pb-5">
-                <span class="text-sm font-black text-[#21485d]">数量</span>
+                <span class="text-sm font-black text-[#21485d]">Quantity</span>
                 <div class="flex h-11 items-center overflow-hidden rounded-full border-2 border-[#79d7f0] bg-[#e8f9ff]">
                   <button
                     type="button"
@@ -486,7 +486,7 @@ onBeforeRouteLeave((to) => {
               </div>
 
               <div class="mt-5 flex items-end justify-between gap-4">
-                <span class="text-sm font-black text-[#21485d]">小计</span>
+                <span class="text-sm font-black text-[#21485d]">Subtotal</span>
                 <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
               </div>
 
@@ -495,50 +495,50 @@ onBeforeRouteLeave((to) => {
                 class="checkout-primary mt-7"
                 @click="goToConfirm"
               >
-                确认订单
+                Confirm Order
               </button>
             </div>
 
             <div v-else-if="checkoutStep === 'confirm'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">CONFIRM</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">确认订单</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Confirm Order</h3>
 
               <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
                 <span aria-hidden="true">←</span>
-                返回上一步
+                Back
               </button>
 
               <label class="checkout-label mt-6">
-                <span>收货人</span>
-                <input v-model="customerName" type="text" autocomplete="name" placeholder="请输入姓名">
+                <span>Name</span>
+                <input v-model="customerName" type="text" autocomplete="name" placeholder="Enter your name">
               </label>
 
               <label class="checkout-label mt-4">
-                <span>收货地址</span>
-                <textarea v-model="deliveryAddress" rows="4" placeholder="请输入收货地址" />
+                <span>Address</span>
+                <textarea v-model="deliveryAddress" rows="4" placeholder="Enter delivery address" />
               </label>
 
               <div class="mt-5 space-y-3 border-t border-[#c9edf8] pt-5 text-sm font-bold text-[#21485d]">
                 <div class="flex justify-between gap-4">
-                  <span>商品</span>
+                  <span>Product</span>
                   <strong class="text-right">{{ selectedProduct.name }}</strong>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span>数量</span>
+                  <span>Quantity</span>
                   <strong>x {{ quantity }}</strong>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span>合计</span>
+                  <span>Total</span>
                   <strong class="text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
                 </div>
               </div>
 
               <div class="mt-7 grid grid-cols-2 gap-3">
                 <button type="button" class="checkout-secondary checkout-bottom-back" @click="backCheckoutStep">
-                  返回上一步
+                  Back
                 </button>
                 <button type="button" class="checkout-secondary" @click="backCheckoutStep">
-                  返回
+                  Back
                 </button>
                 <button
                   type="button"
@@ -546,74 +546,74 @@ onBeforeRouteLeave((to) => {
                   :disabled="!canConfirmOrder"
                   @click="goToPay"
                 >
-                  去支付
+                  Go to Pay
                 </button>
               </div>
             </div>
 
             <div v-else-if="checkoutStep === 'pay'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">PAYMENT</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">支付</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Payment</h3>
 
               <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
                 <span aria-hidden="true">←</span>
-                返回上一步
+                Back
               </button>
 
               <div class="mt-6 space-y-3">
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'card' }">
                   <input v-model="paymentMethod" type="radio" value="card">
-                  <span>银行卡</span>
+                  <span>Credit Card</span>
                 </label>
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'wallet' }">
                   <input v-model="paymentMethod" type="radio" value="wallet">
-                  <span>电子钱包</span>
+                  <span>E-Wallet</span>
                 </label>
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'cod' }">
                   <input v-model="paymentMethod" type="radio" value="cod">
-                  <span>到付</span>
+                  <span>Pay on Delivery</span>
                 </label>
               </div>
 
               <div v-if="paymentMethod === 'card'" class="checkout-card-fields mt-5">
                 <label class="checkout-label">
-                  <span>银行卡号</span>
+                  <span>Card Number</span>
                   <input
                     v-model="cardNumber"
                     type="text"
                     inputmode="numeric"
                     autocomplete="off"
                     maxlength="23"
-                    placeholder="请输入银行卡号"
+                    placeholder="Enter card number"
                   >
                 </label>
 
                 <label class="checkout-label mt-4">
-                  <span>支付密码</span>
+                  <span>Password</span>
                   <input
                     v-model="cardPassword"
                     type="password"
                     autocomplete="new-password"
                     maxlength="12"
-                    placeholder="请输入支付密码"
+                    placeholder="Enter payment password"
                   >
                 </label>
 
                 <p class="checkout-security-note mt-3">
-                  卡号和密码仅用于本次模拟支付，支付完成、返回或关闭后会立即清空，不会保存。
+                  Card number and password are only used for this demo payment. They will be cleared immediately after payment, when you go back, or close the window.
                 </p>
               </div>
 
               <div class="mt-6 rounded-[8px] bg-[#e8f9ff] p-4">
                 <div class="flex items-center justify-between gap-4">
-                  <span class="text-sm font-black text-[#21485d]">应付金额</span>
+                  <span class="text-sm font-black text-[#21485d]">Amount Due</span>
                   <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
                 </div>
               </div>
 
               <div class="mt-7 grid grid-cols-2 gap-3">
                 <button type="button" class="checkout-secondary" @click="backCheckoutStep">
-                  返回
+                  Back
                 </button>
                 <button
                   type="button"
@@ -621,7 +621,7 @@ onBeforeRouteLeave((to) => {
                   :disabled="!canCompletePayment"
                   @click="completePayment"
                 >
-                  立即支付
+                  Pay Now
                 </button>
               </div>
             </div>
@@ -630,12 +630,12 @@ onBeforeRouteLeave((to) => {
 
         <div v-else class="checkout-done relative z-[1] mx-auto mt-8 max-w-[760px] border-[4px] border-[#79d7f0] bg-white/90 p-8 text-center shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
           <p class="text-xs font-black tracking-[0.22em] text-[#2f9ecd]">ORDER COMPLETE</p>
-          <h3 class="mt-3 text-[clamp(28px,5vw,46px)] font-black text-[#21485d]">支付完成</h3>
+          <h3 class="mt-3 text-[clamp(28px,5vw,46px)] font-black text-[#21485d]">Payment Complete</h3>
           <p class="mx-auto mt-4 max-w-[520px] text-sm font-bold leading-7 text-[#21485d]">
-            订单已生成，商品信息已确认。
+            Order confirmed. Your order details have been recorded.
           </p>
           <button type="button" class="checkout-primary mx-auto mt-7 max-w-[260px]" @click="closeCheckout">
-            完成
+            Done
           </button>
         </div>
       </section>
@@ -695,7 +695,7 @@ onBeforeRouteLeave((to) => {
         </template>
 
         <div v-else-if="error" class="col-span-full py-20 text-center font-bold text-[#d45b6a]">
-          商品数据加载失败
+          Failed to load product data
         </div>
 
         <article
@@ -734,7 +734,7 @@ onBeforeRouteLeave((to) => {
             </p>
 
             <span class="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#5fb8d7] px-5 text-sm font-black tracking-[0.1em] text-white transition group-hover:bg-[#4fb0cf]">
-              下单
+              Order
             </span>
           </div>
         </article>

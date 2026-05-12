@@ -1,28 +1,25 @@
 <template>
   <section class="relative min-h-screen overflow-hidden bg-white text-black">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(97,207,255,0.08),transparent_38%),linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]"></div>
+
     <div class="relative z-10 mx-auto min-h-screen max-w-[1540px] px-8 py-14 lg:px-20">
-      <!-- 标题 -->
       <header>
-        <h1 class="font-mono text-5xl font-light tracking-[0.45em] md:text-7xl">
+        <h1 class="font-mono text-5xl font-light tracking-[0.45em] text-slate-900 md:text-7xl">
           gallery
         </h1>
-        <p class="mt-3 text-xl tracking-[0.35em]">GALLERY</p>
-        <!--
-        <p class="mt-3 text-xl tracking-[0.35em]">ギャラリー</p>
-        -->
+        <p class="mt-3 text-xl tracking-[0.35em] text-slate-500">GALLERY</p>
       </header>
 
-      <!-- 顶部缩略图轮播 -->
       <section class="relative mt-8">
         <div class="absolute right-16 -top-14 hidden gap-4 md:flex">
           <button
-            class="flex h-12 w-12 items-center justify-center rounded-full border border-gray-300 bg-white/80 text-3xl text-gray-400 transition hover:border-cyan-300 hover:text-cyan-400"
+            class="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-3xl text-slate-400 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:text-cyan-500 hover:shadow-[0_10px_24px_rgba(97,207,255,0.18)]"
             @click="prevScene"
           >
             ‹
           </button>
           <button
-            class="flex h-12 w-12 items-center justify-center rounded-full border border-gray-300 bg-white/80 text-3xl text-gray-400 transition hover:border-cyan-300 hover:text-cyan-400"
+            class="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-3xl text-slate-400 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:text-cyan-500 hover:shadow-[0_10px_24px_rgba(97,207,255,0.18)]"
             @click="nextScene"
           >
             ›
@@ -32,10 +29,9 @@
         <div class="relative left-1/2 w-screen -translate-x-1/2">
           <div
             ref="thumbnailScroller"
-            class="scene-carousel flex gap-9 overflow-x-auto pb-7 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            class="scene-carousel flex gap-9 overflow-x-auto pb-8 pt-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             :class="{ 'is-dragging': isDragging }"
             @pointerdown="startThumbnailDrag"
-            @pointerleave="stopThumbnailDrag"
             @pointermove="moveThumbnailDrag"
             @pointerup="stopThumbnailDrag"
             @pointercancel="stopThumbnailDrag"
@@ -46,53 +42,55 @@
               :key="scene.renderId"
               :data-real-index="scene.realIndex"
               :data-loop-index="scene.loopIndex"
-              class="gallery-thumb group relative shrink-0"
+              class="gallery-thumb group relative shrink-0 text-left"
+              :class="{ 'is-active': activeIndex === scene.realIndex }"
               @click="handleSceneClick(scene.realIndex)"
             >
-            <!-- 四角框线 -->
-            <span class="corner corner-tl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-tr" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-bl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
-            <span class="corner corner-br" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+              <span class="corner corner-tl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+              <span class="corner corner-tr" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+              <span class="corner corner-bl" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
+              <span class="corner corner-br" :class="activeIndex === scene.realIndex ? 'is-active' : ''"></span>
 
-            <!-- 缩略图占位 -->
-            <div class="gallery-thumb-image overflow-hidden bg-white">
-              <img
-                :src="scene.image"
-                :alt="`Scene ${scene.id}`"
-                class="block h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
-              >
-              <span class="absolute bottom-3 right-4 text-[9px] tracking-[0.18em] text-white/70">
-                VISUAL ARTS/Key
-              </span>
-            </div>
+              <div class="gallery-thumb-image overflow-hidden rounded-[2px] bg-white">
+                <img
+                  :src="scene.image"
+                  :alt="`Scene ${scene.id}`"
+                  class="block h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.045]"
+                  draggable="false"
+                >
+                <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(8,16,34,0.22),transparent_45%),linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_34%)]"></div>
 
-            <div
-              class="mx-auto mt-3 h-0 w-0 border-x-[6px] border-b-[10px] border-x-transparent"
-              :class="activeIndex === scene.realIndex ? 'border-b-cyan-300' : 'border-b-gray-300'"
-            ></div>
+                <span class="absolute bottom-3 right-4 text-[9px] tracking-[0.18em] text-white/70">
+                  VISUAL ARTS/Key
+                </span>
+              </div>
+
+              <div class="mt-3 flex items-center justify-between">
+                <div
+                  class="mx-auto h-0 w-0 border-x-[6px] border-b-[10px] border-x-transparent transition-colors duration-300"
+                  :class="activeIndex === scene.realIndex ? 'border-b-cyan-300' : 'border-b-slate-300'"
+                ></div>
+              </div>
             </button>
           </div>
         </div>
       </section>
 
-      <!-- 主体：左大图 + 右文字 -->
-      <main class="mt-8 grid grid-cols-1 gap-12 lg:grid-cols-[62%_38%] lg:items-center">
-        <!-- 大图区域 -->
-        <section class="relative mx-auto w-full max-w-[820px]">
-          <span class="absolute -left-3 -top-3 h-6 w-6 border-l-2 border-t-2 border-gray-300"></span>
-          <span class="absolute -right-3 -top-3 h-6 w-6 border-r-2 border-t-2 border-gray-300"></span>
-          <span class="absolute -bottom-3 -left-3 h-6 w-6 border-b-2 border-l-2 border-gray-300"></span>
-          <span class="absolute -bottom-3 -right-3 h-6 w-6 border-b-2 border-r-2 border-gray-300"></span>
+      <main class="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[62%_38%] lg:items-center">
+        <section class="relative mx-auto w-full max-w-[840px]">
+          <span class="absolute -left-3 -top-3 h-6 w-6 border-l-2 border-t-2 border-slate-300"></span>
+          <span class="absolute -right-3 -top-3 h-6 w-6 border-r-2 border-t-2 border-slate-300"></span>
+          <span class="absolute -bottom-3 -left-3 h-6 w-6 border-b-2 border-l-2 border-slate-300"></span>
+          <span class="absolute -bottom-3 -right-3 h-6 w-6 border-b-2 border-r-2 border-slate-300"></span>
 
-          <div class="relative aspect-[16/9] overflow-hidden border border-gray-200 bg-white shadow-sm">
+          <div class="relative aspect-[16/9] overflow-hidden border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
             <img
               :key="activeScene.id"
               :src="activeScene.image"
               :alt="`Scene ${activeScene.id}`"
               class="scene-main-image block h-full w-full object-cover"
             >
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.02),rgba(255,255,255,.08)_62%,rgba(255,255,255,.18))]"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.02),rgba(255,255,255,.06)_58%,rgba(255,255,255,.16))]"></div>
 
             <div class="absolute bottom-4 right-5 text-[10px] tracking-[0.25em] text-cyan-500/80">
               © VISUAL ARTS / Key
@@ -100,36 +98,21 @@
           </div>
         </section>
 
-        <!-- 右侧说明 -->
         <section class="relative px-2 lg:px-8">
-          <div class="mb-6 h-px w-12 bg-gray-400"></div>
-          <p class="mb-4 text-xs font-bold tracking-[0.25em]">FILE</p>
+          <div class="mb-6 h-px w-12 bg-slate-400"></div>
+          <p class="mb-4 text-xs font-bold tracking-[0.25em] text-slate-500">FILE</p>
+
           <div class="relative inline-block">
             <span class="absolute -left-3 -top-2 h-3 w-3 border-l-2 border-t-2 border-cyan-300"></span>
             <span class="absolute -right-3 -top-2 h-3 w-3 border-r-2 border-t-2 border-cyan-300"></span>
             <span class="absolute -bottom-2 -left-3 h-3 w-3 border-b-2 border-l-2 border-cyan-300"></span>
             <span class="absolute -bottom-2 -right-3 h-3 w-3 border-b-2 border-r-2 border-cyan-300"></span>
-            <h2 class="text-2xl tracking-[0.12em]">#{{ activeScene.id }}</h2>
+            <h2 class="text-2xl tracking-[0.12em] text-slate-900">#{{ activeScene.id }}</h2>
           </div>
 
-          <p class="mt-8 max-w-xl whitespace-pre-line text-lg leading-[2.2] tracking-[0.08em]">
+          <p class="mt-8 max-w-xl whitespace-pre-line text-lg leading-[2.2] tracking-[0.08em] text-slate-700">
             {{ activeScene.description }}
           </p>
-
-          <div class="mt-10 flex items-center gap-5">
-            <button
-              class="border border-cyan-300 px-5 py-2 text-sm tracking-[0.25em] text-cyan-500 transition hover:bg-cyan-400 hover:text-white"
-              @click="prevScene"
-            >
-              PREV
-            </button>
-            <button
-              class="border border-cyan-300 px-5 py-2 text-sm tracking-[0.25em] text-cyan-500 transition hover:bg-cyan-400 hover:text-white"
-              @click="nextScene"
-            >
-              NEXT
-            </button>
-          </div>
         </section>
       </main>
     </div>
@@ -156,112 +139,93 @@ let lastPointerTime = 0
 let dragVelocity = 0
 let targetScrollLeft = 0
 
-const dragEase = 0.36
+const dragEase = 0.18
 const inertiaFriction = 0.94
-const minInertiaVelocity = 0.08
+const minInertiaVelocity = 0.18
+const minDragDistance = 10
+
+// 保留你喜欢的效果：默认让第 3 张图作为当前选中项。
 const activeThumbnailSlot = 2
+
+const wheelStrength = 0.9
 
 const scenes = [
   {
     id: '001',
     description:
       '白い霧を抜けて、登り切った先に「それ」はある。\nどこまでも続きそうな、一面の花畑。\n色とりどりの花々が鼻腔をくすぐる、とても綺麗な花畑。\n——そこにはいつも、君がいた。',
-    thumbClass: 'bg-gradient-to-br from-indigo-900 via-purple-700 to-pink-300',
-    mainClass: 'bg-gradient-to-br from-cyan-50 via-white to-pink-100',
     image: '/images/atri1.jpg',
   },
   {
     id: '002',
     description:
       '懐かしい駅前通りに、夏の光が差し込んでいる。\n見慣れたはずの景色なのに、少しだけ違って見えた。\nその違和感が、物語の始まりだった。',
-    thumbClass: 'bg-gradient-to-br from-sky-300 via-emerald-200 to-yellow-100',
-    mainClass: 'bg-gradient-to-br from-sky-100 via-emerald-50 to-yellow-100',
     image: '/images/atri2.jpg',
   },
   {
     id: '003',
     description:
       '透明な街の中を、光の線が走っていく。\n現実と仮想が重なり合う場所で、失くした記憶の断片が静かに浮かび上がった。',
-    thumbClass: 'bg-gradient-to-br from-cyan-200 via-white to-blue-500',
-    mainClass: 'bg-gradient-to-br from-cyan-100 via-white to-blue-200',
     image: '/images/atri3.jpg',
   },
   {
     id: '004',
     description:
       '風に舞う花びらの中で、少女は空を見上げていた。\n柔らかな光に包まれたその表情は、どこか遠い約束を思い出しているようだった。',
-    thumbClass: 'bg-gradient-to-br from-white via-pink-100 to-cyan-100',
-    mainClass: 'bg-gradient-to-br from-white via-pink-50 to-cyan-100',
     image: '/images/atri4.jpg',
   },
   {
     id: '005',
     description:
       '移動する車窓の向こうで、街の輪郭がゆっくり流れていく。\n静かな会話と沈黙の間に、少しずつ距離が縮まっていった。',
-    thumbClass: 'bg-gradient-to-br from-slate-300 via-blue-100 to-indigo-300',
-    mainClass: 'bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100',
     image: '/images/atri5.jpg',
   },
   {
     id: '006',
     description:
       '夕暮れの海岸辺で、波の音が静かに響いていた。\nオレンジ色の空に映る二人の影は、少しずつ近づいていった。',
-    thumbClass: 'bg-gradient-to-br from-orange-300 via-pink-200 to-purple-300',
-    mainClass: 'bg-gradient-to-br from-orange-100 via-pink-50 to-purple-100',
     image: '/images/atri6.jpg',
   },
   {
     id: '007',
     description:
       '図書館の静けさの中で、ページをめくる音だけが聞こえる。\n君が真剣に本を読む横顔は、いつまでも見ていられる。',
-    thumbClass: 'bg-gradient-to-br from-amber-200 via-yellow-100 to-orange-200',
-    mainClass: 'bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100',
     image: '/images/atri7.jpg',
   },
   {
     id: '008',
     description:
       '雨上がりの街路樹の下で、水たまりに映る空を見ていた。\n君が差し出した傘の中は、世界で一番暖かい場所だった。',
-    thumbClass: 'bg-gradient-to-br from-blue-300 via-cyan-200 to-teal-300',
-    mainClass: 'bg-gradient-to-br from-blue-100 via-cyan-50 to-teal-100',
     image: '/images/atri8.jpg',
   },
   {
     id: '009',
     description:
       '冬の夜空に咲く花火は、一瞬の美しさだけれど、\n君と一緒に見た景色は、永遠に記憶に残る。',
-    thumbClass: 'bg-gradient-to-br from-red-400 via-orange-300 to-yellow-300',
-    mainClass: 'bg-gradient-to-br from-red-100 via-orange-50 to-yellow-100',
     image: '/images/atri9.jpg',
   },
   {
     id: '010',
     description:
       '春の桜吹雪の中で、君の笑顔が一番輝いていた。\n舞い落ちる花びらが、二人の時間を優しく包み込んだ。',
-    thumbClass: 'bg-gradient-to-br from-pink-300 via-rose-200 to-red-200',
-    mainClass: 'bg-gradient-to-br from-pink-100 via-rose-50 to-red-100',
     image: '/images/atri10.jpg',
   },
   {
     id: '011',
     description:
       '星空の下で、君の手を握りしめていた。\n無数の星が瞬く中で、二人の約束は永遠に輝く。',
-    thumbClass: 'bg-gradient-to-br from-indigo-400 via-purple-300 to-violet-300',
-    mainClass: 'bg-gradient-to-br from-indigo-100 via-purple-50 to-violet-100',
     image: '/images/atri11.jpg',
   },
   {
     id: '012',
     description:
       '新しい朝が来て、君と共に歩き出す。\nこれからもずっと、二人で同じ道を歩いていこう。',
-    thumbClass: 'bg-gradient-to-br from-green-300 via-emerald-200 to-teal-200',
-    mainClass: 'bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100',
     image: '/images/atri12.jpg',
   },
 ]
 
 const loopedScenes = computed(() =>
-  [-1, 0, 1].flatMap((loopIndex) =>
+  [-2, -1, 0, 1, 2].flatMap((loopIndex) =>
     scenes.map((scene, realIndex) => ({
       ...scene,
       realIndex,
@@ -273,35 +237,84 @@ const loopedScenes = computed(() =>
 
 const activeScene = computed(() => scenes[activeIndex.value])
 
-function selectScene(index) {
-  activeIndex.value = index
-  nextTick(alignActiveThumbnailToSlot)
+function getGap(scroller) {
+  return parseFloat(getComputedStyle(scroller).columnGap) || 0
 }
 
-function alignActiveThumbnailToSlot(behavior = isDragging.value ? 'auto' : 'smooth') {
+function getTargetSlotLeft(scroller, itemWidth) {
+  const gap = getGap(scroller)
+  return activeThumbnailSlot * (itemWidth + gap)
+}
+
+function getNearestThumbForActiveIndex() {
   const scroller = thumbnailScroller.value
-  const activeThumb = scroller?.querySelector(
-    `.gallery-thumb[data-real-index="${activeIndex.value}"][data-loop-index="0"]`
+  if (!scroller) return null
+
+  const thumbs = Array.from(
+    scroller.querySelectorAll(`.gallery-thumb[data-real-index="${activeIndex.value}"]`)
   )
 
-  if (!scroller || !activeThumb) {
-    return
+  if (!thumbs.length) return null
+
+  const targetSlotLeft = getTargetSlotLeft(scroller, thumbs[0].offsetWidth)
+
+  let bestThumb = thumbs[0]
+  let bestDistance = Infinity
+
+  for (const thumb of thumbs) {
+    const targetLeft = thumb.offsetLeft - targetSlotLeft
+    const distance = Math.abs(targetLeft - scroller.scrollLeft)
+
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestThumb = thumb
+    }
   }
 
-  const gap = parseFloat(getComputedStyle(scroller).columnGap) || 0
-  const scrollerRect = scroller.getBoundingClientRect()
-  const activeThumbRect = activeThumb.getBoundingClientRect()
-  const slotLeft = scrollerRect.left + activeThumbnailSlot * (activeThumb.offsetWidth + gap)
+  return bestThumb
+}
 
-  scroller.scrollTo({
-    left: scroller.scrollLeft + activeThumbRect.left - slotLeft,
-    behavior,
-  })
+function getThumbForActiveIndexInLoop(loopIndex = 0) {
+  const scroller = thumbnailScroller.value
+  if (!scroller) return null
+
+  return scroller.querySelector(
+    `.gallery-thumb[data-real-index="${activeIndex.value}"][data-loop-index="${loopIndex}"]`
+  )
+}
+
+function alignThumbnail(targetThumb, useSmooth = false) {
+  const scroller = thumbnailScroller.value
+  if (!scroller || !targetThumb) return
+
+  const targetSlotLeft = getTargetSlotLeft(scroller, targetThumb.offsetWidth)
+  const nextLeft = targetThumb.offsetLeft - targetSlotLeft
+
+  if (useSmooth) {
+    scroller.scrollTo({
+      left: nextLeft,
+      behavior: 'smooth',
+    })
+  } else {
+    scroller.scrollLeft = nextLeft
+  }
+}
+
+function alignActiveThumbnailToNearest(useSmooth = false) {
+  alignThumbnail(getNearestThumbForActiveIndex(), useSmooth)
+}
+
+function alignActiveThumbnailToCurrentLoop(useSmooth = false) {
+  alignThumbnail(getThumbForActiveIndexInLoop(0), useSmooth)
+}
+
+function selectScene(index) {
+  activeIndex.value = index
+  nextTick(() => alignActiveThumbnailToNearest(false))
 }
 
 function handleSceneClick(index) {
   if (shouldSuppressClick.value) return
-
   selectScene(index)
 }
 
@@ -314,18 +327,15 @@ function getLoopMetrics(scroller) {
   }
 
   const loopWidth = firstRealThumb.offsetLeft - firstCloneThumb.offsetLeft
+  if (loopWidth <= 0) return null
 
-  if (loopWidth <= 0) {
-    return null
-  }
-
-  const centerOffset = (scroller.clientWidth - firstRealThumb.clientWidth) / 2
-  const firstRealCenterScroll = firstRealThumb.offsetLeft - centerOffset
+  const targetSlotLeft = getTargetSlotLeft(scroller, firstRealThumb.clientWidth)
+  const firstRealTargetScroll = firstRealThumb.offsetLeft - targetSlotLeft
 
   return {
     loopWidth,
-    lowerLimit: firstRealCenterScroll - loopWidth / 2,
-    upperLimit: firstRealCenterScroll + loopWidth * 1.5,
+    lowerLimit: firstRealTargetScroll - loopWidth * 1.5,
+    upperLimit: firstRealTargetScroll + loopWidth * 2.5,
   }
 }
 
@@ -333,9 +343,7 @@ function normalizeCarouselLoop(syncTarget = false) {
   const scroller = thumbnailScroller.value
   const metrics = getLoopMetrics(scroller)
 
-  if (!scroller || !metrics) {
-    return
-  }
+  if (!scroller || !metrics) return
 
   const previousScrollLeft = scroller.scrollLeft
   let nextScrollLeft = previousScrollLeft
@@ -346,15 +354,14 @@ function normalizeCarouselLoop(syncTarget = false) {
     nextScrollLeft -= metrics.loopWidth
   }
 
-  if (nextScrollLeft === previousScrollLeft) {
-    return
-  }
+  if (nextScrollLeft === previousScrollLeft) return
 
   scroller.scrollLeft = nextScrollLeft
 
   if (syncTarget) {
-    targetScrollLeft += nextScrollLeft - previousScrollLeft
-    dragStartScrollLeft += nextScrollLeft - previousScrollLeft
+    const offset = nextScrollLeft - previousScrollLeft
+    targetScrollLeft += offset
+    dragStartScrollLeft += offset
   }
 }
 
@@ -362,10 +369,7 @@ function updateActiveSceneFromCarousel() {
   activationAnimationId = 0
 
   const scroller = thumbnailScroller.value
-
-  if (!scroller) {
-    return
-  }
+  if (!scroller) return
 
   const scrollerRect = scroller.getBoundingClientRect()
   const thumbs = Array.from(scroller.querySelectorAll('.gallery-thumb'))
@@ -373,13 +377,9 @@ function updateActiveSceneFromCarousel() {
       const rect = thumb.getBoundingClientRect()
       const overlap = Math.min(rect.right, scrollerRect.right) - Math.max(rect.left, scrollerRect.left)
 
-      return {
-        thumb,
-        rect,
-        overlap,
-      }
+      return { thumb, rect, overlap }
     })
-    .filter(({ rect, overlap }) => overlap >= rect.width * 0.45)
+    .filter(({ rect, overlap }) => overlap >= rect.width * 0.42)
     .sort((a, b) => a.rect.left - b.rect.left)
 
   const activeThumb = thumbs[Math.min(activeThumbnailSlot, thumbs.length - 1)]
@@ -391,10 +391,7 @@ function updateActiveSceneFromCarousel() {
 }
 
 function scheduleActiveSceneFromCarousel() {
-  if (activationAnimationId) {
-    return
-  }
-
+  if (activationAnimationId) return
   activationAnimationId = requestAnimationFrame(updateActiveSceneFromCarousel)
 }
 
@@ -405,14 +402,12 @@ function handleCarouselScroll() {
 
 function stopDragAnimation() {
   if (!dragAnimationId) return
-
   cancelAnimationFrame(dragAnimationId)
   dragAnimationId = 0
 }
 
 function stopInertia() {
   if (!inertiaAnimationId) return
-
   cancelAnimationFrame(inertiaAnimationId)
   inertiaAnimationId = 0
 }
@@ -425,24 +420,27 @@ function animateDragScroll() {
     return
   }
 
-  scroller.scrollLeft += (targetScrollLeft - scroller.scrollLeft) * dragEase
+  const diff = targetScrollLeft - scroller.scrollLeft
+  scroller.scrollLeft += diff * dragEase
   normalizeCarouselLoop(true)
   dragAnimationId = requestAnimationFrame(animateDragScroll)
 }
 
 function startInertia() {
   const scroller = thumbnailScroller.value
-  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) return
+  if (!scroller || Math.abs(dragVelocity) < minInertiaVelocity) {
+    nextTick(() => alignActiveThumbnailToNearest(true))
+    return
+  }
 
   const step = () => {
-    const nextScrollLeft = scroller.scrollLeft + dragVelocity * 16
-
-    scroller.scrollLeft = nextScrollLeft
+    scroller.scrollLeft += dragVelocity * 18
     normalizeCarouselLoop()
     dragVelocity *= inertiaFriction
 
     if (Math.abs(dragVelocity) < minInertiaVelocity) {
       inertiaAnimationId = 0
+      nextTick(() => alignActiveThumbnailToNearest(true))
       return
     }
 
@@ -458,6 +456,7 @@ function startThumbnailDrag(event) {
 
   stopInertia()
   stopDragAnimation()
+
   isDragging.value = true
   dragMoved = false
   shouldSuppressClick.value = false
@@ -468,6 +467,7 @@ function startThumbnailDrag(event) {
   lastPointerTime = performance.now()
   dragVelocity = 0
   targetScrollLeft = scroller.scrollLeft
+
   scroller.setPointerCapture?.(event.pointerId)
   dragAnimationId = requestAnimationFrame(animateDragScroll)
 }
@@ -480,14 +480,15 @@ function moveThumbnailDrag(event) {
 
   const distance = event.clientX - dragStartX
   const now = performance.now()
-  const elapsed = Math.max(16, now - lastPointerTime)
+  const elapsed = Math.max(8, now - lastPointerTime)
 
-  if (Math.abs(distance) > 6) {
+  if (Math.abs(distance) > minDragDistance) {
     dragMoved = true
     shouldSuppressClick.value = true
   }
 
   targetScrollLeft = dragStartScrollLeft - distance
+
   dragVelocity = (lastPointerX - event.clientX) / elapsed
   lastPointerX = event.clientX
   lastPointerTime = now
@@ -495,7 +496,9 @@ function moveThumbnailDrag(event) {
 
 function stopThumbnailDrag(event) {
   const scroller = thumbnailScroller.value
-  if (!isDragging.value) return
+  if (!isDragging.value || !scroller) return
+
+  if (event && dragPointerId !== null && event.pointerId !== dragPointerId) return
 
   isDragging.value = false
   stopDragAnimation()
@@ -503,7 +506,7 @@ function stopThumbnailDrag(event) {
   normalizeCarouselLoop()
 
   if (dragPointerId !== null) {
-    scroller?.releasePointerCapture?.(dragPointerId)
+    scroller.releasePointerCapture?.(dragPointerId)
   }
 
   dragPointerId = null
@@ -512,7 +515,9 @@ function stopThumbnailDrag(event) {
     startInertia()
     window.setTimeout(() => {
       shouldSuppressClick.value = false
-    }, 80)
+    }, 90)
+  } else {
+    nextTick(() => alignActiveThumbnailToNearest(true))
   }
 }
 
@@ -524,11 +529,36 @@ function nextScene() {
   selectScene((activeIndex.value + 1) % scenes.length)
 }
 
+function handleWheel(event) {
+  const scroller = thumbnailScroller.value
+  if (!scroller) return
+
+  const isHorizontalIntent = Math.abs(event.deltaX) > Math.abs(event.deltaY) * 1.2
+  if (!isHorizontalIntent || Math.abs(event.deltaX) < 1) return
+
+  event.preventDefault()
+  stopInertia()
+  stopDragAnimation()
+
+  scroller.scrollLeft += event.deltaX * wheelStrength
+  normalizeCarouselLoop()
+  scheduleActiveSceneFromCarousel()
+}
+
 onMounted(() => {
   nextTick(() => {
-    alignActiveThumbnailToSlot('auto')
-    scheduleActiveSceneFromCarousel()
+    requestAnimationFrame(() => {
+      activeIndex.value = 0
+      // 直接对齐到 loopIndex=0 的 #001，由于有5套数据，左侧自然会露出 #012(-1)、#011(-1)
+      alignActiveThumbnailToCurrentLoop(false)
+
+      const scroller = thumbnailScroller.value
+      if (scroller) {
+        scroller.addEventListener('wheel', handleWheel, { passive: false })
+      }
+    })
   })
+
   window.addEventListener('resize', scheduleActiveSceneFromCarousel)
 })
 
@@ -536,6 +566,11 @@ onUnmounted(() => {
   stopDragAnimation()
   stopInertia()
   window.removeEventListener('resize', scheduleActiveSceneFromCarousel)
+
+  const scroller = thumbnailScroller.value
+  if (scroller) {
+    scroller.removeEventListener('wheel', handleWheel)
+  }
 
   if (activationAnimationId) {
     cancelAnimationFrame(activationAnimationId)
@@ -545,13 +580,21 @@ onUnmounted(() => {
 
 <style scoped>
 .scene-carousel {
-  --thumb-width: clamp(250px, 16.2vw, 340px);
+  --thumb-width: clamp(260px, 17.5vw, 360px);
+  --carousel-side-space: clamp(24px, 6vw, 96px);
+
   cursor: grab;
-  padding-left: calc((100vw - var(--thumb-width)) / 2);
-  padding-right: calc((100vw - var(--thumb-width)) / 2);
-  scroll-padding-inline: calc((100vw - var(--thumb-width)) / 2);
+
+  /* 修复点：
+     不再用半屏 padding，所以不会出现第一张前面空一大截；
+     但 JS 初始化仍然会对齐到真实循环组的 #003，
+     因此 #001 前面继续往左拖可以接上 #012。 */
+  padding-left: var(--carousel-side-space);
+  padding-right: var(--carousel-side-space);
+  scroll-padding-inline: var(--carousel-side-space);
+
   scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   user-select: none;
   overscroll-behavior-x: contain;
   touch-action: pan-y;
@@ -560,25 +603,53 @@ onUnmounted(() => {
 
 .gallery-thumb {
   width: var(--thumb-width);
-  scroll-snap-align: center;
+  scroll-snap-align: start;
+  transition:
+    transform 0.42s ease,
+    opacity 0.32s ease,
+    filter 0.32s ease;
+}
+
+.gallery-thumb.is-active {
+  transform: translateY(-8px);
+}
+
+.gallery-thumb:not(.is-active) {
+  opacity: 0.9;
 }
 
 .gallery-thumb-image {
   position: relative;
   aspect-ratio: 16 / 9;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.06),
+    0 14px 34px rgba(15, 23, 42, 0.06);
+  transition:
+    box-shadow 0.35s ease,
+    transform 0.35s ease,
+    filter 0.35s ease;
+}
+
+.gallery-thumb.is-active .gallery-thumb-image {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 20px 44px rgba(97, 207, 255, 0.18);
+  filter: saturate(1.05);
+}
+
+.gallery-thumb:hover .gallery-thumb-image {
+  transform: translateY(-2px);
 }
 
 .scene-main-image {
-  animation: scene-main-fade 0.34s ease both;
+  animation: scene-main-fade 0.42s ease both;
 }
 
 @keyframes scene-main-fade {
   from {
     opacity: 0.72;
-    transform: scale(1.012);
+    transform: scale(1.018);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
@@ -590,8 +661,10 @@ onUnmounted(() => {
   z-index: 2;
   height: 14px;
   width: 14px;
-  border-color: #c6c8cf;
-  transition: border-color 0.2s ease;
+  border-color: #cbd5e1;
+  transition:
+    border-color 0.24s ease,
+    transform 0.24s ease;
 }
 
 .corner.is-active {
@@ -628,8 +701,11 @@ onUnmounted(() => {
 
 .scene-carousel.is-dragging {
   cursor: grabbing;
-  scroll-behavior: auto;
   scroll-snap-type: none;
+}
+
+.scene-carousel.is-dragging .gallery-thumb {
+  transition: none;
 }
 
 .scene-carousel.is-dragging button {
@@ -638,5 +714,12 @@ onUnmounted(() => {
 
 section.relative.mt-8 > .absolute.right-16 {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .scene-carousel {
+    --thumb-width: min(72vw, 310px);
+    --carousel-side-space: clamp(18px, 5vw, 36px);
+  }
 }
 </style>
