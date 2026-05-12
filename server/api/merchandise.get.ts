@@ -16,7 +16,7 @@ const fallbackMerchandise = [
   {
     id: "fallback-ph-animate-1",
     name: "动画原创亚克力立牌",
-    category: "亚克力",
+    category: "亚克力立牌",
     priceDisplay: "JPY 3,300 (含税)",
     imageDescription: "Acrylic goods product image",
     imageUrl: `${BASE_URL}ph_animate_1.webp`,
@@ -34,7 +34,7 @@ const fallbackMerchandise = [
   {
     id: "fallback-ph-aniplex-2",
     name: "ATRI 亚克力商品",
-    category: "周边",
+    category: "亚克力立牌",
     priceDisplay: "JPY 28,000",
     imageDescription: "Official goods product image",
     imageUrl: `${BASE_URL}ph_aniplex_2.webp`,
@@ -88,7 +88,7 @@ const fallbackMerchandise = [
   {
     id: "fallback-ph-toranoana",
     name: "明信片大小亚克力支架",
-    category: "周边",
+    category: "亚克力立牌",
     priceDisplay: "JPY 153,000",
     imageDescription: "Acrylic stand goods product image",
     imageUrl: `${BASE_URL}ph_toranoana.webp`,

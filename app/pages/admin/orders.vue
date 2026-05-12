@@ -1,31 +1,1193 @@
-<script setup>
-definePageMeta({
-  layout: 'admin'
-})
+<script setup lang="ts">
+import { ref, computed, onMounted, nextTick } from "vue";
+import { gsap } from "gsap";
 
-const isDark = useState('admin-dark-mode', () => false)
+definePageMeta({
+  layout: "admin",
+  middleware: "auth",
+});
+
+const isDark = useState("admin-dark-mode", () => false);
 
 function toggleTheme() {
-  isDark.value = !isDark.value
+  isDark.value = !isDark.value;
 }
+
+// --- 模拟数据 ---
+interface Order {
+  id: string;
+  productName: string;
+  type: string;
+  quantity: number;
+  status: "Shipped" | "Pending" | "Cancelled";
+  orderTime: string;
+  price: string;
+}
+
+const orders = ref<Order[]>([
+  {
+    id: "ORD001",
+    productName: "ATRI Acrylic Stand",
+    type: "Merch",
+    quantity: 2,
+    status: "Shipped",
+    orderTime: "2026-05-09 14:30",
+    price: "JPY 6,600",
+  },
+  {
+    id: "ORD002",
+    productName: "Original Animation B2 Tapestry",
+    type: "Poster",
+    quantity: 1,
+    status: "Pending",
+    orderTime: "2026-05-09 10:15",
+    price: "JPY 500",
+  },
+  {
+    id: "ORD003",
+    productName: "Limited Keychains",
+    type: "Merch",
+    quantity: 5,
+    status: "Cancelled",
+    orderTime: "2026-05-08 16:45",
+    price: "JPY 15,000",
+  },
+  {
+    id: "ORD004",
+    productName: "Limited Keychains",
+    type: "Merch",
+    quantity: 2,
+    status: "Shipped",
+    orderTime: "2026-05-09 16:30",
+    price: "JPY 3,600",
+  },
+  {
+    id: "ORD005",
+    productName: "ATRI Acrylic Stand",
+    type: "Merch",
+    quantity: 2,
+    status: "Shipped",
+    orderTime: "2026-05-09 14:30",
+    price: "JPY 6,600",
+  },
+  {
+    id: "ORD006",
+    productName: "ATRI Character抱枕",
+    type: "周边",
+    quantity: 1,
+    status: "Pending",
+    orderTime: "2026-05-08 09:20",
+    price: "JPY 3,800",
+  },
+  {
+    id: "ORD007",
+    productName: "游戏原声 OST CD",
+    type: "周边",
+    quantity: 3,
+    status: "Shipped",
+    orderTime: "2026-05-07 15:45",
+    price: "JPY 4,200",
+  },
+  {
+    id: "ORD008",
+    productName: "ATRI 亚克力立牌套装",
+    type: "亚克力立牌",
+    quantity: 2,
+    status: "Cancelled",
+    orderTime: "2026-05-07 11:30",
+    price: "JPY 2,400",
+  },
+  {
+    id: "ORD009",
+    productName: "ATRI Visual Novel",
+    type: "周边",
+    quantity: 1,
+    status: "Shipped",
+    orderTime: "2026-05-06 18:00",
+    price: "JPY 5,500",
+  },
+  {
+    id: "ORD010",
+    productName: "ATRI 海报 A2",
+    type: "海报",
+    quantity: 4,
+    status: "Pending",
+    orderTime: "2026-05-06 10:15",
+    price: "JPY 2,000",
+  },
+  {
+    id: "ORD011",
+    productName: "ATRI 挂件套装",
+    type: "挂件",
+    quantity: 3,
+    status: "Shipped",
+    orderTime: "2026-05-05 14:20",
+    price: "JPY 1,800",
+  },
+  {
+    id: "ORD012",
+    productName: "ATRI 鼠标垫",
+    type: "周边",
+    quantity: 1,
+    status: "Cancelled",
+    orderTime: "2026-05-05 09:00",
+    price: "JPY 2,200",
+  },
+  {
+    id: "ORD013",
+    productName: "ATRI T恤 白色款",
+    type: "周边",
+    quantity: 2,
+    status: "Shipped",
+    orderTime: "2026-05-04 16:30",
+    price: "JPY 4,500",
+  },
+  {
+    id: "ORD014",
+    productName: "ATRI T恤 黑色款",
+    type: "周边",
+    quantity: 1,
+    status: "Pending",
+    orderTime: "2026-05-04 11:45",
+    price: "JPY 4,500",
+  },
+  {
+    id: "ORD015",
+    productName: "ATRI 马克杯",
+    type: "周边",
+    quantity: 2,
+    status: "Shipped",
+    orderTime: "2026-05-03 15:00",
+    price: "JPY 2,800",
+  },
+  {
+    id: "ORD016",
+    productName: "ATRI 艺术画框",
+    type: "周边",
+    quantity: 1,
+    status: "Pending",
+    orderTime: "2026-05-02 11:20",
+    price: "JPY 6,500",
+  },
+  {
+    id: "ORD017",
+    productName: "ATRI 限定徽章套装",
+    type: "周边",
+    quantity: 4,
+    status: "Shipped",
+    orderTime: "2026-05-02 09:15",
+    price: "JPY 3,200",
+  },
+  {
+    id: "ORD018",
+    productName: "ATRI 限定明信片",
+    type: "周边",
+    quantity: 10,
+    status: "Cancelled",
+    orderTime: "2026-05-01 16:40",
+    price: "JPY 2,000",
+  },
+  {
+    id: "ORD019",
+    productName: "ATRI 原画设定集",
+    type: "周边",
+    quantity: 1,
+    status: "Shipped",
+    orderTime: "2026-05-01 10:30",
+    price: "JPY 4,800",
+  },
+]);
+
+const stats = [
+  {
+    label: "总订单量",
+    value: "1,450",
+    trend: "↑ 1.67%",
+    trendType: "up",
+    isPrimary: true,
+  },
+  {
+    label: "已取消订单",
+    value: "82",
+    trend: "↓ 2.67%",
+    trendType: "down",
+    isPrimary: false,
+  },
+  {
+    label: "已完成订单",
+    value: "1,368",
+    trend: "↑ 1.2%",
+    trendType: "up",
+    isPrimary: false,
+  },
+  {
+    label: "每周退货率对比",
+    value: "1.5%",
+    trend: "↓ 0.5%",
+    trendType: "down",
+    isPrimary: false,
+  },
+];
+
+// --- 搜索与筛选 ---
+const searchQuery = ref("");
+const selectedStatus = ref("订单状态");
+const isStatusDropdownOpen = ref(false);
+const selectedType = ref("全部类型");
+const selectedTimeRange = ref("全部时间");
+const selectedPriceRange = ref("全部价格");
+const isFilterDropdownOpen = ref(false);
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+const typeOptions = [
+  "全部类型",
+  "周边",
+  "亚克力立牌",
+  "海报",
+  "挂件",
+  "Merch",
+  "Poster",
+];
+
+const timeRangeOptions = [
+  { label: "全部时间", value: "全部时间" },
+  { label: "今天", value: "today" },
+  { label: "近7天", value: "week" },
+  { label: "近30天", value: "month" },
+];
+
+const priceRangeOptions = [
+  { label: "全部价格", value: "全部价格" },
+  { label: "¥0-¥1,000", value: "0-1000", min: 0, max: 1000 },
+  { label: "¥1,000-¥3,000", value: "1000-3000", min: 1000, max: 3000 },
+  { label: "¥3,000-¥5,000", value: "3000-5000", min: 3000, max: 5000 },
+  { label: "¥5,000+", value: "5000+", min: 5000, max: Infinity },
+];
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredOrders.value.length / itemsPerPage);
+});
+
+const shouldShowPagination = computed(() => {
+  return totalPages.value > 1;
+});
+
+const paginatedOrders = computed(() => {
+  const filtered = filteredOrders.value;
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filtered.slice(start, end);
+});
+
+const filteredOrders = computed(() => {
+  return orders.value.filter((order) => {
+    const matchSearch = order.productName
+      .toLowerCase()
+      .includes(searchQuery.value.toLowerCase());
+    const matchStatus =
+      selectedStatus.value === "订单状态" ||
+      order.status === selectedStatus.value;
+    const matchType =
+      selectedType.value === "全部类型" || order.type === selectedType.value;
+    const matchTime = checkTimeRange(order.orderTime);
+    const matchPrice = checkPriceRange(order.price);
+    return matchSearch && matchStatus && matchType && matchTime && matchPrice;
+  });
+});
+
+function checkTimeRange(orderTime: string): boolean {
+  if (selectedTimeRange.value === "全部时间") return true;
+
+  const [datePart] = orderTime.split(" ");
+  if (!datePart) return true;
+
+  const parts = datePart.split("-");
+  if (parts.length !== 3) return true;
+
+  const yearStr = parts[0];
+  const monthStr = parts[1];
+  const dayStr = parts[2];
+  if (!yearStr || !monthStr || !dayStr) return true;
+
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return true;
+
+  const orderDate = new Date(year, month - 1, day);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  switch (selectedTimeRange.value) {
+    case "今天":
+      return orderDate.getTime() === today.getTime();
+    case "近7天":
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return orderDate >= weekAgo;
+    case "近30天":
+      const monthAgo = new Date(today);
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      return orderDate >= monthAgo;
+    default:
+      return true;
+  }
+}
+
+function checkPriceRange(price: string): boolean {
+  if (selectedPriceRange.value === "全部价格") return true;
+
+  const match = price.match(/[\d,]+/);
+  if (!match) return true;
+
+  const priceValue = parseInt(match[0].replace(/,/g, ""), 10);
+
+  switch (selectedPriceRange.value) {
+    case "¥0-¥1,000":
+      return priceValue >= 0 && priceValue <= 1000;
+    case "¥1,000-¥3,000":
+      return priceValue >= 1000 && priceValue <= 3000;
+    case "¥3,000-¥5,000":
+      return priceValue >= 3000 && priceValue <= 5000;
+    case "¥5,000+":
+      return priceValue >= 5000;
+    default:
+      return true;
+  }
+}
+
+watch(
+  [
+    searchQuery,
+    selectedStatus,
+    selectedType,
+    selectedTimeRange,
+    selectedPriceRange,
+  ],
+  () => {
+    currentPage.value = 1;
+  },
+);
+
+function toggleStatusDropdown() {
+  if (isStatusDropdownOpen.value) {
+    isStatusDropdownOpen.value = false;
+  } else {
+    isStatusDropdownOpen.value = true;
+    isFilterDropdownOpen.value = false;
+  }
+}
+
+function selectStatus(status: string) {
+  selectedStatus.value = status;
+  isStatusDropdownOpen.value = false;
+}
+
+function getStatusDropdownItemClass(status: string, isDark: boolean) {
+  const isSelected = selectedStatus.value === status;
+  if (isSelected) {
+    return "bg-[#5b4eff]/10 text-[#5b4eff] font-bold";
+  }
+  return isDark
+    ? "text-gray-300 hover:bg-white/5 hover:text-white"
+    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+}
+
+function getStatusDropdownItemIconClass(status: string, isDark: boolean) {
+  const isSelected = selectedStatus.value === status;
+  if (isSelected) {
+    return "bg-[#5b4eff]/15 text-[#5b4eff]";
+  }
+  switch (status) {
+    case "Shipped":
+      return isDark
+        ? "bg-[#1aa467]/20 text-[#34d399]"
+        : "bg-[#e2f8ee] text-[#1aa467]";
+    case "Pending":
+      return isDark
+        ? "bg-[#f59e0b]/20 text-[#fbbf24]"
+        : "bg-[#fff4e5] text-[#f59e0b]";
+    case "Cancelled":
+      return isDark
+        ? "bg-[#ef4444]/20 text-[#f87171]"
+        : "bg-[#fee2e2] text-[#ef4444]";
+    default:
+      return isDark ? "bg-white/10 text-gray-400" : "bg-gray-100 text-gray-500";
+  }
+}
+
+function getStatusDropdownIconClass(status: string) {
+  switch (status) {
+    case "Shipped":
+      return "M5 13l4 4L19 7";
+    case "Pending":
+      return "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z";
+    case "Cancelled":
+      return "M6 18L18 6M6 6l12 12";
+    default:
+      return "";
+  }
+}
+
+function getStatusDisplayText(status: string) {
+  switch (status) {
+    case "Shipped":
+      return "已发货";
+    case "Pending":
+      return "待处理";
+    case "Cancelled":
+      return "已取消";
+    default:
+      return status;
+  }
+}
+
+function toggleFilterDropdown() {
+  if (isFilterDropdownOpen.value) {
+    isFilterDropdownOpen.value = false;
+  } else {
+    isFilterDropdownOpen.value = true;
+    isStatusDropdownOpen.value = false;
+  }
+}
+
+function getFilterItemClass(isSelected: boolean, isDark: boolean) {
+  if (isSelected) {
+    return "bg-[#5b4eff]/10 text-[#5b4eff] font-bold border-transparent ring-1 ring-[#5b4eff]/30";
+  }
+  return isDark
+    ? "bg-[#11131c] text-gray-300 border-white/5 hover:bg-white/5 hover:text-white"
+    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-gray-900";
+}
+
+function getFilterButtonClass(isDark: boolean, hasActiveFilter: boolean) {
+  if (hasActiveFilter) {
+    return "bg-[#5b4eff]/10 text-[#5b4eff] ring-[#5b4eff]/30";
+  }
+  return isDark
+    ? "bg-[#1a1d27] ring-white/10 text-gray-100 hover:bg-[#242837]"
+    : "bg-white ring-gray-200/80 text-gray-900 hover:bg-gray-50";
+}
+
+function hasActiveFilters(): boolean {
+  return (
+    selectedType.value !== "全部类型" ||
+    selectedTimeRange.value !== "全部时间" ||
+    selectedPriceRange.value !== "全部价格"
+  );
+}
+
+function goToPage(page: number) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+}
+
+// --- 状态样式映射 (严格根据 isDark 切换) ---
+const getStatusStyles = (status: Order["status"], dark: boolean) => {
+  switch (status) {
+    case "Shipped":
+      return dark
+        ? "bg-[#1aa467]/15 text-[#34d399]"
+        : "bg-[#e2f8ee] text-[#1aa467]";
+    case "Pending":
+      return dark
+        ? "bg-[#f59e0b]/15 text-[#fbbf24]"
+        : "bg-[#fff4e5] text-[#f59e0b]";
+    case "Cancelled":
+      return dark
+        ? "bg-[#ef4444]/15 text-[#f87171]"
+        : "bg-[#fee2e2] text-[#ef4444]";
+  }
+};
+
+const getStatusLabel = (status: Order["status"]) => {
+  switch (status) {
+    case "Shipped":
+      return "已发货";
+    case "Pending":
+      return "待处理";
+    case "Cancelled":
+      return "已取消";
+  }
+};
+
+// --- GSAP 动画 ---
+onMounted(() => {
+  nextTick(() => {
+    gsap.from(".stagger-card", {
+      y: 30,
+      opacity: 0,
+      duration: 0.6,
+      stagger: 0.08,
+      ease: "power3.out",
+    });
+
+    gsap.from(".table-row", {
+      x: -15,
+      opacity: 0,
+      duration: 0.5,
+      stagger: 0.05,
+      delay: 0.3,
+      ease: "power2.out",
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (
+      !target.closest(".status-dropdown") &&
+      !target.closest(".filter-dropdown")
+    ) {
+      isStatusDropdownOpen.value = false;
+      isFilterDropdownOpen.value = false;
+    }
+  });
+});
 </script>
 
 <template>
-  <section
-    class="min-h-screen px-10 py-10 transition-colors duration-500"
-    :class="isDark ? 'bg-[#07080d]' : 'bg-transparent'"
+  <div
+    class="orders-page min-h-full px-8 py-8 pb-0 flex flex-col transition-colors duration-500"
+    :class="
+      isDark
+        ? 'orders-dark bg-transparent text-gray-100'
+        : 'bg-[#f2f4f8] text-gray-900'
+    "
   >
     <AdminHeader
-      title="Orders"
+      title="订单管理"
       :is-dark="isDark"
       @toggle-theme="toggleTheme"
     />
 
-    <p
-      class="max-w-2xl text-sm leading-7 transition-colors duration-300"
-      :class="isDark ? 'text-gray-400' : 'text-gray-500'"
-    >
-      订单管理区域，用于查看和处理用户提交的订单信息。
-    </p>
-  </section>
+    <!-- 顶部数据看板 -->
+    <div class="grid grid-cols-1 gap-5 mb-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        v-for="stat in stats"
+        :key="stat.label"
+        class="stagger-card group relative flex flex-col justify-between rounded-[24px] p-6 min-h-[140px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-300 hover:bg-[#5b4eff] hover:shadow-lg hover:shadow-[#5b4eff]/30"
+        :class="
+          isDark
+            ? 'bg-[#11131c] ring-1 ring-white/5 hover:text-white'
+            : 'bg-white ring-1 ring-gray-100 hover:text-white'
+        "
+      >
+        <div class="flex items-start justify-between">
+          <span
+            class="text-[15px] font-bold transition-colors duration-300 group-hover:text-white/90"
+            :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+          >
+            {{ stat.label }}
+          </span>
+          <span
+            class="px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wide transition-colors duration-300"
+            :class="[
+              stat.trendType === 'up'
+                ? isDark
+                  ? 'bg-[#1aa467]/15 text-[#34d399] group-hover:bg-green-400/20 group-hover:text-green-300'
+                  : 'bg-green-100 text-green-600 group-hover:bg-green-400/20 group-hover:text-green-300'
+                : '',
+              stat.trendType === 'down'
+                ? isDark
+                  ? 'bg-[#ef4444]/15 text-[#f87171] group-hover:bg-red-400/20 group-hover:text-red-200'
+                  : 'bg-red-100 text-red-500 group-hover:bg-red-400/20 group-hover:text-red-200'
+                : '',
+            ]"
+          >
+            {{ stat.trend }}
+          </span>
+        </div>
+        <div
+          class="mt-4 text-[34px] font-black tracking-tight"
+          :class="
+            isDark
+              ? 'text-gray-100 group-hover:text-white'
+              : 'text-gray-900 group-hover:text-white'
+          "
+        >
+          {{ stat.value }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 主体区域（使用你定制的 SVG 背景） -->
+    <div class="relative mt-2.5">
+      <!-- 动态变色的 SVG 异形背景 -->
+      <svg
+        class="absolute inset-0"
+        style="clip-path: inset(0 round 48px 48px 0 0); height: 286px"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 1200 220"
+        preserveAspectRatio="xMidYMid slice"
+      >
+        <path
+          :fill="isDark ? '#11131c' : '#ffffff'"
+          class="transition-colors duration-500"
+          d="M 0 220 L 0 32 C 0 14, 14 0, 34 0 L 900 0 C 918 0, 930 7, 936 23 C 946 51, 965 64, 994 64 L 1164 64 C 1186 64, 1200 80, 1200 104 L 1200 220 Z"
+        />
+      </svg>
+
+      <div class="relative z-10 p-6">
+        <!-- 操作栏 -->
+        <div class="flex flex-wrap items-center gap-4 mb-[44px]">
+          <!-- 搜索框 -->
+          <div class="relative flex-1 min-w-[280px] max-w-[420px] group-search">
+            <span
+              class="absolute inset-y-0 left-0 flex items-center pl-4 transition-colors group-search-focus-within:text-[#5b4eff]"
+              :class="isDark ? 'text-gray-500' : 'text-gray-400'"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2.5"
+                stroke="currentColor"
+                class="h-4 w-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+            </span>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="搜索商品名称"
+              class="w-full border-0 ring-1 shadow-sm rounded-full py-[17px] pl-11 pr-4 text-[13px] font-bold placeholder:font-medium focus:ring-2 focus:ring-[#5b4eff] outline-none transition-all"
+              :class="
+                isDark
+                  ? 'bg-[#1a1d27] ring-white/10 text-gray-100 placeholder:text-gray-500 focus:bg-[#11131c]'
+                  : 'bg-white ring-gray-200/80 text-gray-900 placeholder:text-gray-400 focus:bg-white'
+              "
+            />
+          </div>
+
+          <!-- 订单状态筛选 -->
+          <div class="relative status-dropdown">
+            <button
+              type="button"
+              @click="toggleStatusDropdown"
+              class="flex items-center gap-3 border-0 ring-1 shadow-sm rounded-full py-[17px] pl-5 pr-5 text-[13px] font-bold focus:ring-2 focus:ring-[#5b4eff] outline-none transition-all"
+              :class="
+                isDark
+                  ? 'bg-[#1a1d27] ring-white/10 text-gray-100 hover:bg-[#242837]'
+                  : 'bg-white ring-gray-200/80 text-gray-900 hover:bg-gray-50'
+              "
+            >
+              <span>{{ getStatusDisplayText(selectedStatus) }}</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 transition-transform duration-200"
+                :class="isStatusDropdownOpen ? 'rotate-180' : ''"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            <Transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 scale-95 -translate-y-2"
+              enter-to-class="opacity-100 scale-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 scale-100 translate-y-0"
+              leave-to-class="opacity-0 scale-95 -translate-y-2"
+            >
+              <div
+                v-if="isStatusDropdownOpen"
+                class="absolute z-50 mt-3 w-48 overflow-hidden rounded-2xl shadow-xl"
+                :class="
+                  isDark
+                    ? 'bg-[#1a1d27] ring-1 ring-white/10'
+                    : 'bg-white ring-1 ring-gray-200/80'
+                "
+              >
+                <div class="py-2">
+                  <button
+                    v-for="status in [
+                      '订单状态',
+                      'Shipped',
+                      'Pending',
+                      'Cancelled',
+                    ]"
+                    :key="status"
+                    @click="selectStatus(status)"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-[13px] transition-colors"
+                    :class="getStatusDropdownItemClass(status, isDark)"
+                  >
+                    <span
+                      v-if="status !== '订单状态'"
+                      class="flex items-center justify-center w-6 h-6 rounded-full"
+                      :class="getStatusDropdownItemIconClass(status, isDark)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          :d="getStatusDropdownIconClass(status)"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      v-else
+                      class="flex items-center justify-center w-6 h-6 rounded-full"
+                      :class="
+                        selectedStatus === status
+                          ? 'bg-[#5b4eff]/15 text-[#5b4eff]'
+                          : isDark
+                            ? 'bg-white/10 text-gray-400'
+                            : 'bg-gray-100 text-gray-500'
+                      "
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                        />
+                      </svg>
+                    </span>
+                    <span>
+                      {{
+                        status === "Shipped"
+                          ? "已发货"
+                          : status === "Pending"
+                            ? "待处理"
+                            : status === "Cancelled"
+                              ? "已取消"
+                              : status
+                      }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- 复杂筛选面板 -->
+          <div class="relative filter-dropdown">
+            <button
+              type="button"
+              @click="toggleFilterDropdown"
+              class="flex items-center gap-3 border-0 ring-1 shadow-sm rounded-full py-[17px] pl-5 pr-5 text-[13px] font-bold transition-all"
+              :class="getFilterButtonClass(isDark, hasActiveFilters())"
+            >
+              <span>筛选</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 transition-transform duration-200"
+                :class="isFilterDropdownOpen ? 'rotate-180' : ''"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            <Transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="opacity-0 scale-95 -translate-y-2"
+              enter-to-class="opacity-100 scale-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="opacity-100 scale-100 translate-y-0"
+              leave-to-class="opacity-0 scale-95 -translate-y-2"
+            >
+              <div
+                v-if="isFilterDropdownOpen"
+                class="absolute z-50 mt-3 w-80 overflow-hidden rounded-2xl shadow-xl p-4 space-y-4"
+                :class="
+                  isDark
+                    ? 'bg-[#1a1d27] ring-1 ring-white/10'
+                    : 'bg-white ring-1 ring-gray-200/80'
+                "
+              >
+                <div>
+                  <p
+                    class="text-xs font-bold mb-2"
+                    :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                  >
+                    类型
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="type in typeOptions"
+                      :key="type"
+                      @click="
+                        selectedType = type;
+                        isFilterDropdownOpen = false;
+                      "
+                      class="px-3 py-2 text-[12px] font-bold rounded-full transition-all border"
+                      :class="getFilterItemClass(selectedType === type, isDark)"
+                    >
+                      {{ type }}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p
+                    class="text-xs font-bold mb-2"
+                    :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                  >
+                    下单时间
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="time in timeRangeOptions"
+                      :key="time.value"
+                      @click="
+                        selectedTimeRange = time.label;
+                        isFilterDropdownOpen = false;
+                      "
+                      class="px-3 py-2 text-[12px] font-bold rounded-full transition-all border"
+                      :class="
+                        getFilterItemClass(
+                          selectedTimeRange === time.label,
+                          isDark,
+                        )
+                      "
+                    >
+                      {{ time.label }}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p
+                    class="text-xs font-bold mb-2"
+                    :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                  >
+                    价格
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="price in priceRangeOptions"
+                      :key="price.value"
+                      @click="
+                        selectedPriceRange = price.label;
+                        isFilterDropdownOpen = false;
+                      "
+                      class="px-3 py-2 text-[12px] font-bold rounded-full transition-all border"
+                      :class="
+                        getFilterItemClass(
+                          selectedPriceRange === price.label,
+                          isDark,
+                        )
+                      "
+                    >
+                      {{ price.label }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
+
+          <!-- 右侧统计小丸子 -->
+          <div class="ml-auto -mt-[40px]">
+            <div
+              class="inline-flex items-center gap-2 px-5 py-[12px] rounded-full shadow-sm transition-colors duration-500"
+              :class="
+                isDark
+                  ? 'bg-[#11131c] ring-1 ring-white/10'
+                  : 'bg-white ring-1 ring-gray-100'
+              "
+            >
+              <p
+                class="text-[13px] font-bold"
+                :class="isDark ? 'text-gray-300' : 'text-gray-800'"
+              >
+                商品总量:
+                <span class="font-black text-[#5b4eff]">{{
+                  filteredOrders.length
+                }}</span>
+                笔订单
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 动态变色的表格大容器 -->
+        <div
+          class="overflow-hidden -mx-6 px-6 pt-6 transition-colors duration-500"
+          :style="{
+            clipPath: 'inset(0 0 0 0 round 48px 12px 12px 48px)',
+            backgroundColor: isDark ? '#1a1d27' : '#f8f8f8',
+          }"
+        >
+          <div class="overflow-x-auto pb-4">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr
+                  class="text-[13px] font-extrabold border-b-[1.5px]"
+                  :class="
+                    isDark
+                      ? 'text-gray-200 border-white/5'
+                      : 'text-gray-900 border-gray-100'
+                  "
+                >
+                  <th class="pb-4 pl-2 text-center font-black w-[18%]">
+                    商品名称
+                  </th>
+                  <th class="pb-4 text-center font-black w-[10%]">类型</th>
+                  <th class="pb-4 text-center font-black w-[10%]">订单数量</th>
+                  <th class="pb-4 text-center font-black w-[10%]">状态</th>
+                  <th class="pb-4 text-center font-black w-[15%]">下单时间</th>
+                  <th class="pb-4 text-center font-black w-[12%]">价格</th>
+                  <th class="pb-4 text-center font-black w-[25%]">操作</th>
+                </tr>
+              </thead>
+              <tbody class="text-[13px] font-bold">
+                <tr
+                  v-for="order in paginatedOrders"
+                  :key="order.id"
+                  class="table-row border-b last:border-none transition-colors"
+                  :class="
+                    isDark
+                      ? 'border-white/5 hover:bg-[#242837]'
+                      : 'border-gray-200/50 hover:bg-white'
+                  "
+                >
+                  <td
+                    class="py-5 text-center w-[18%]"
+                    :class="isDark ? 'text-gray-100' : 'text-gray-900'"
+                  >
+                    <span class="truncate block">{{ order.productName }}</span>
+                  </td>
+                  <td
+                    class="py-5 text-center w-[10%]"
+                    :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                  >
+                    {{ order.type }}
+                  </td>
+                  <td
+                    class="py-5 text-center w-[10%]"
+                    :class="isDark ? 'text-gray-100' : 'text-gray-900'"
+                  >
+                    {{ order.quantity }}
+                  </td>
+                  <td class="py-5 text-center w-[10%]">
+                    <div
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black tracking-wider"
+                      :class="getStatusStyles(order.status, isDark)"
+                    >
+                      {{ getStatusLabel(order.status) }}
+                    </div>
+                  </td>
+                  <td
+                    class="py-5 text-center w-[15%]"
+                    :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                  >
+                    {{ order.orderTime }}
+                  </td>
+                  <td
+                    class="py-5 text-center w-[12%] font-extrabold"
+                    :class="isDark ? 'text-gray-100' : 'text-gray-900'"
+                  >
+                    {{ order.price }}
+                  </td>
+                  <td class="py-5 text-center w-[25%]">
+                    <div class="flex items-center justify-center gap-5">
+                      <button
+                        class="flex items-center gap-1.5 transition-colors"
+                        :class="
+                          isDark
+                            ? 'text-gray-400 hover:text-[#715df2]'
+                            : 'text-gray-500 hover:text-[#5b4eff]'
+                        "
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                        查看
+                      </button>
+                      <button
+                        class="flex items-center gap-1.5 transition-colors hover:text-red-500"
+                        :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 动态变色的分页器 -->
+          <div
+            v-if="shouldShowPagination"
+            class="mt-8 mb-4 flex items-center justify-center gap-2"
+          >
+            <button
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-all"
+              :class="
+                isDark
+                  ? 'bg-[#11131c] text-gray-400 hover:bg-[#5b4eff] hover:text-white ring-1 ring-white/5'
+                  : 'bg-white text-gray-600 hover:bg-[#5b4eff] hover:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)]'
+              "
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage === 1"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+
+            <template v-for="page in totalPages" :key="page">
+              <button
+                v-if="
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                "
+                class="flex h-10 min-w-[40px] items-center justify-center rounded-full px-3 text-sm font-bold transition-all"
+                :class="
+                  currentPage === page
+                    ? 'bg-[#5b4eff] text-white shadow-md shadow-[#5b4eff]/30'
+                    : isDark
+                      ? 'bg-[#11131c] text-gray-400 hover:bg-[#5b4eff] hover:text-white ring-1 ring-white/5'
+                      : 'bg-white text-gray-600 hover:bg-[#5b4eff] hover:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)]'
+                "
+                @click="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+              <span
+                v-else-if="page === currentPage - 2 || page === currentPage + 2"
+                class="px-2 text-gray-400"
+              >
+                ...
+              </span>
+            </template>
+
+            <button
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-all"
+              :class="
+                isDark
+                  ? 'bg-[#11131c] text-gray-400 hover:bg-[#5b4eff] hover:text-white ring-1 ring-white/5'
+                  : 'bg-white text-gray-600 hover:bg-[#5b4eff] hover:text-white shadow-[0_2px_10px_rgba(0,0,0,0.04)]'
+              "
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage === totalPages"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+/* 全局平滑过渡 */
+.orders-page * {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* 搜索框图标 focus 联动 */
+.group-search-focus-within\:text-\[\#5b4eff\]:focus-within {
+  color: #5b4eff;
+}
+
+/* 表格滚动条美化 */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.orders-dark .overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+</style>
