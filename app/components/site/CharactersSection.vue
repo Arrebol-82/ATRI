@@ -87,9 +87,6 @@ function nextCharacter() {
               Character
             </h2>
             <span class="hidden h-px w-28 bg-[#69cdf7] lg:block" />
-            <span class="hidden font-mono text-[9px] font-bold leading-4 text-[#5fcdf8] lg:block">
-              Remaining<br>Days:XX10566 min.
-            </span>
           </div>
           <p class="mt-4 font-sans text-xl font-bold tracking-[0.48em] md:text-2xl">人物鉴赏</p>
         </div>
@@ -116,11 +113,6 @@ function nextCharacter() {
 
       <div class="relative grid flex-1 items-end gap-8 pb-12 pt-8 lg:grid-cols-[minmax(500px,1fr)_minmax(420px,620px)] lg:gap-14 lg:pb-16 lg:pt-0">
         <div class="relative min-h-[540px] lg:min-h-[690px]">
-          <div class="vertical-copy left-copy">
-            <span>Game Protocol</span>
-            <span>https://key.visualarts.gr.jp</span>
-          </div>
-
           <p class="quote-copy">
             {{ activeCharacter.quote }}
           </p>
@@ -266,19 +258,6 @@ function nextCharacter() {
 
 .thumb-button.is-active .thumb-pointer {
   opacity: 1;
-}
-
-.vertical-copy {
-  position: absolute;
-  left: -26px;
-  bottom: 12%;
-  display: flex;
-  gap: 54px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  writing-mode: vertical-rl;
 }
 
 .quote-copy {
@@ -525,7 +504,6 @@ function nextCharacter() {
   }
 
   .change-image,
-  .vertical-copy,
   .vertical-name {
     display: none;
   }

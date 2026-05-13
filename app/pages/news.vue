@@ -1,52 +1,47 @@
 <template>
-  <section class="relative min-h-screen overflow-hidden bg-white text-[#24424b]">
+  <section
+    :id="!showFullPage ? 'news' : undefined"
+    class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]"
+  >
     <!-- 背景装饰 -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute left-[10%] top-16 h-40 w-[520px] rounded-full bg-sky-100/70 blur-3xl"></div>
-      <div class="absolute right-[-170px] top-[-120px] h-[420px] w-[420px] rounded-full border border-sky-100"></div>
-      <div class="absolute right-[-80px] top-8 h-[280px] w-[280px] rounded-full border border-sky-50"></div>
-      <div class="absolute left-0 bottom-12 h-px w-[520px] rotate-[-25deg] bg-gradient-to-r from-transparent via-sky-200 to-transparent"></div>
-      <div class="absolute right-0 bottom-24 h-px w-[460px] rotate-[-18deg] bg-gradient-to-r from-transparent via-sky-200 to-transparent"></div>
+      <div class="absolute left-[8%] top-20 h-[320px] w-[320px] rounded-full bg-sky-100/60 blur-3xl"></div>
+      <div class="absolute right-[5%] top-[30%] h-[280px] w-[280px] rounded-full bg-sky-50/80 blur-3xl"></div>
+      <div class="absolute left-[20%] bottom-20 h-[200px] w-[200px] rounded-full border border-sky-100/50"></div>
     </div>
 
-    <!-- 新闻详情弹窗 -->
-    <div
-      v-if="selectedNews"
-      class="fixed inset-0 z-[60] overflow-y-auto bg-white"
-    >
-      <article
-        class="news-detail relative min-h-screen w-full overflow-hidden p-6 text-[#263f48] md:p-10 lg:p-14"
-      >
-
-
+    <!-- 新闻详情页 -->
+    <div v-if="selectedNews" class="fixed inset-0 z-[60] overflow-y-auto bg-white">
+      <article class="news-detail relative min-h-screen w-full overflow-hidden p-6 text-[#263f48] md:p-10 lg:p-14">
         <div class="news-detail-bubbles" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
+          <span v-for="i in 12" :key="i" />
         </div>
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
-            <button
-              class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
-              aria-label="Close news detail"
-              @click="closeNewsDetail"
-            >
-              x
-            </button>
+            <!-- 详情页关闭按钮 -->
+            <div class="mb-6 flex items-center justify-end">
+              <button
+                class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
+                aria-label="Close news detail"
+                @click="closeDetailToNewsList"
+              >
+                ×
+              </button>
+            </div>
 
             <time class="block text-xl font-bold tracking-[0.08em] text-sky-500">
               {{ selectedNews.date }}
             </time>
+
+            <div class="relative mt-5 aspect-[16/9] overflow-hidden rounded-xl border-2 border-sky-200">
+              <img
+                :src="selectedNews.image"
+                :alt="selectedNews.title"
+                class="h-full w-full object-cover"
+                :style="{ objectPosition: selectedNews.imagePosition || 'center' }"
+              />
+            </div>
 
             <h2 class="mt-5 border-b-2 border-sky-100 pb-8 text-2xl font-black leading-[1.7] tracking-[0.06em] text-[#263f48] md:text-4xl">
               {{ selectedNews.title }}
@@ -59,15 +54,18 @@
 
               <section class="rounded-2xl bg-sky-50/80 p-6">
                 <h3 class="mb-4 text-xl font-black text-sky-500">イベント概要</h3>
+
                 <dl class="space-y-3">
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">日程</dt>
                     <dd>{{ selectedNews.event.date }}</dd>
                   </div>
+
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">会場</dt>
                     <dd>{{ selectedNews.event.place }}</dd>
                   </div>
+
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">内容</dt>
                     <dd>{{ selectedNews.event.content }}</dd>
@@ -77,6 +75,7 @@
 
               <section>
                 <h3 class="mb-4 text-xl font-black text-sky-500">注意事項</h3>
+
                 <ul class="list-disc space-y-2 pl-6">
                   <li v-for="note in selectedNews.notes" :key="note">
                     {{ note }}
@@ -86,72 +85,98 @@
             </div>
 
             <div class="mt-12 border-t-2 border-sky-100 pt-8">
-              <p class="mb-4 text-sm font-black tracking-[0.3em] text-sky-400">SHARE</p>
+              <p class="mb-4 text-sm font-black tracking-[0.3em] text-sky-400">
+                SHARE
+              </p>
+
               <div class="flex gap-3">
-                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm text-white">X</button>
-                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-sm text-white">Li</button>
+                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm text-white">
+                  X
+                </button>
+                <button class="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-sm text-white">
+                  Li
+                </button>
               </div>
             </div>
-
           </div>
-
-
         </div>
       </article>
     </div>
 
+    <!-- 新闻列表页 -->
     <div class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24">
-      <!-- 标题 -->
       <header class="mb-14">
-        <div class="flex items-end gap-6">
-          <h1 class="text-6xl font-black uppercase tracking-[0.04em] text-sky-400 md:text-8xl">
-            NEWS
-          </h1>
-          <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
-            ニュース
-          </p>
+        <div class="flex items-center justify-between">
+          <div class="flex items-end gap-6">
+            <h1 class="text-6xl font-black uppercase tracking-[0.04em] text-sky-400 md:text-8xl">
+              NEWS
+            </h1>
+
+            <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
+              ニュース
+            </p>
+          </div>
+
+          <!-- 新闻完整页右上角 BACK：返回首页 NEWS 模块 -->
+          <button
+            v-if="showFullPage"
+            class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
+            @click="goHomeNewsSection"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>BACK</span>
+          </button>
         </div>
       </header>
 
-      <!-- 新闻列表页 -->
       <main>
-        <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        <!-- 首页：3 个；新闻页：12 个 -->
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <article
-            v-for="item in newsList"
+            v-for="item in displayedNews"
             :key="item.id"
-            class="group cursor-pointer rounded-2xl border-2 border-sky-200 bg-white/90 p-5 shadow-[0_10px_30px_rgba(56,189,248,0.08)] transition duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-[0_16px_40px_rgba(56,189,248,0.18)]"
+            class="group cursor-pointer rounded-xl border-2 border-sky-300 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400 hover:shadow-lg"
             @click="openNewsDetail(item)"
           >
-            <!-- 图片占位：以后有图片了，把这里换成 img -->
-            <div class="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl" :class="item.bgClass">
-              <div class="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,.15),transparent_45%,rgba(255,255,255,.45))]"></div>
-              <div class="absolute left-6 top-6 rounded-full bg-white/50 px-4 py-1 text-xs font-bold tracking-[0.18em] text-sky-500">
+            <div class="relative aspect-[16/9] overflow-hidden rounded-lg">
+              <img
+                :src="item.image"
+                :alt="item.title"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                :style="{ objectPosition: item.imagePosition || 'center' }"
+              />
+
+              <div class="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold tracking-[0.15em] text-sky-500 shadow-sm">
                 NEWS
-              </div>
-              <div class="absolute bottom-5 left-6 h-8 w-36 rounded-full bg-white/30 blur-md"></div>
-              <div class="absolute right-5 top-5 h-12 w-12 rounded-full border border-white/70"></div>
-              <div class="absolute bottom-5 right-5 text-[10px] font-bold tracking-[0.25em] text-white/90">
-                ATRI
               </div>
             </div>
 
-            <time class="block text-xl font-bold tracking-[0.06em] text-sky-500">
+            <time class="mt-4 block text-lg font-bold tracking-[0.08em] text-sky-500">
               {{ item.date }}
             </time>
 
-            <h2 class="mt-4 min-h-[72px] text-[17px] font-bold leading-8 tracking-[0.06em] text-[#263f48]">
+            <h2 class="mt-3 line-clamp-2 text-sm font-bold leading-6 tracking-[0.04em] text-[#263f48]">
               {{ item.title }}
             </h2>
           </article>
         </div>
 
-        <!-- 分页装饰 -->
-        <div class="mt-16 flex items-center justify-center gap-4 text-lg font-bold text-sky-400">
-          <button class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-400 text-white">1</button>
-          <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">2</button>
-          <span>...</span>
-          <button class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-300 hover:bg-sky-50">10</button>
-          <button class="ml-2 rounded-full border border-sky-300 px-5 py-2 text-sm tracking-[0.2em] hover:bg-sky-50">NEXT</button>
+        <!-- MORE 按钮：只在首页模块显示 -->
+        <div v-if="!showFullPage" class="mt-14 flex justify-center">
+          <NuxtLink
+            to="/news"
+            class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          >
+            <span>MORE</span>
+
+            <span class="transition-transform group-hover:translate-x-1">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </NuxtLink>
         </div>
       </main>
     </div>
@@ -159,7 +184,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+
+const router = useRouter()
+
+const props = defineProps({
+  showFullPage: {
+    type: Boolean,
+    default: true
+  }
+})
 
 const selectedNews = ref(null)
 
@@ -168,127 +202,288 @@ const newsList = [
     id: 1,
     date: '2026.03.19',
     title: 'スペシャルイベントの詳細情報を公開！（チケット先行優先販売受付ほか）',
-    bgClass: 'bg-gradient-to-br from-pink-100 via-yellow-50 to-emerald-100',
+    image: '/images/news1.jpg',
     body: [
       'ATRI記念イベントの詳細情報を公開しました。作品の世界観を楽しめるトークや展示企画など、特別な一日を予定しています。',
-      'チケットの受付期間や参加方法につきましては、下記の概要をご確認ください。今後の追加情報も本ページにて順次お知らせいたします。',
+      'チケットの受付期間や参加方法につきましては、下記の概要をご確認ください。今後の追加情報も本ページにて順次お知らせいたします。'
     ],
     event: {
       date: '2026年8月16日（日）',
       place: 'アクアシティホール',
-      content: 'キャストトーク、展示、来場者特典配布など',
+      content: 'キャストトーク、展示、来場者特典配布など'
     },
     notes: [
       '内容は予告なく変更となる場合があります。',
-      '会場への直接のお問い合わせはご遠慮ください。',
-      '最新情報は公式サイトにてご確認ください。',
-    ],
+      '会場への直接のお問い合わせはご遠慮ください。'
+    ]
   },
   {
     id: 2,
     date: '2026.03.06',
     title: 'スペシャルイベント開催決定！！',
-    bgClass: 'bg-gradient-to-br from-slate-200 via-white to-sky-300',
+    image: '/images/news2.jpg',
     body: [
-      'ATRI公式スペシャルイベントの開催が決定しました。作品を応援してくださる皆さまに向けて、特別な企画を準備中です。',
-      '開催日時、出演者、チケット情報などの詳細は後日発表いたします。',
+      'ATRI公式スペシャルイベントの開催が決定しました。',
+      '開催日時、出演者、チケット情報などの詳細は後日発表いたします。'
     ],
     event: {
       date: '後日公開予定',
       place: '後日公開予定',
-      content: 'スペシャルトーク、最新情報発表など',
+      content: 'スペシャルトーク、最新情報発表など'
     },
     notes: [
-      '詳細は後日発表いたします。',
-      '本イベントの内容は変更となる場合があります。',
-    ],
+      '詳細は後日発表いたします。'
+    ]
   },
   {
     id: 3,
     date: '2026.03.03',
     title: '甘慣れな子誕生日記念♡直筆サイン色紙をプレゼント',
-    bgClass: 'bg-gradient-to-br from-pink-100 via-white to-cyan-100',
+    image: '/images/news3.jpg',
     body: [
       'キャラクターの誕生日を記念して、抽選プレゼントキャンペーンを実施します。',
-      '対象期間中に指定の方法で応募された方の中から、直筆サイン色紙をプレゼントいたします。',
+      '対象期間中に指定の方法で応募された方の中から、直筆サイン色紙をプレゼントいたします。'
     ],
     event: {
       date: '2026年3月3日（火）〜3月10日（火）',
       place: '公式SNS',
-      content: 'フォロー＆リポストキャンペーン',
+      content: 'フォロー＆リポストキャンペーン'
     },
     notes: [
-      '応募には公式SNSアカウントのフォローが必要です。',
-      '当選者には後日DMにてご連絡します。',
-    ],
+      '応募には公式SNSアカウントのフォローが必要です。'
+    ]
   },
   {
     id: 4,
     date: '2026.03.16',
     title: 'イベント情報と追加キャンペーンのお知らせを公開しました',
-    bgClass: 'bg-gradient-to-br from-yellow-50 via-pink-100 to-lime-100',
+    image: '/images/news4.jpg',
     body: [
-      'イベントに関する追加情報を公開しました。あわせて、来場者向けのキャンペーンも実施予定です。',
-      '詳細は各項目をご確認ください。',
+      'イベントに関する追加情報を公開しました。',
+      '詳細は各項目をご確認ください。'
     ],
     event: {
       date: '2026年3月16日（月）',
       place: '公式サイト内',
-      content: '追加キャンペーン情報公開',
+      content: '追加キャンペーン情報公開'
     },
     notes: [
-      'キャンペーン内容は変更となる可能性があります。',
-      '応募条件をよくご確認ください。',
-    ],
+      'キャンペーン内容は変更となる可能性があります。'
+    ]
   },
   {
     id: 5,
     date: '2026.02.13',
     title: '【ゲーマーズ限定】Blu-ray全巻購入キャンペーンのお知らせ',
-    bgClass: 'bg-gradient-to-br from-orange-100 via-cyan-50 to-rose-100',
+    image: '/images/news5.jpg',
     body: [
-      'Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。',
-      '対象店舗、応募方法、特典内容については下記をご確認ください。',
+      'Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'
     ],
     event: {
       date: '2026年2月13日（金）開始',
       place: '対象店舗',
-      content: 'Blu-ray購入者限定特典キャンペーン',
+      content: 'Blu-ray購入者限定特典キャンペーン'
     },
     notes: [
-      '特典はなくなり次第終了となります。',
-      '詳しくは対象店舗の案内をご確認ください。',
-    ],
+      '特典はなくなり次第終了となります。'
+    ]
   },
   {
     id: 6,
     date: '2026.01.19',
     title: 'スタッフ＆キャストによるトークイベント情報を公開しました',
-    bgClass: 'bg-gradient-to-br from-sky-100 via-purple-100 to-pink-100',
+    image: '/images/news6.jpg',
     body: [
-      'スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。',
-      '制作の裏側やキャラクターについて語る、ファン必見の内容です。',
+      'スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'
     ],
     event: {
       date: '2026年1月19日（月）',
       place: 'イベント会場',
-      content: 'スタッフ＆キャストトーク',
+      content: 'スタッフ＆キャストトーク'
     },
     notes: [
-      '登壇者は予告なく変更となる場合があります。',
-      '会場内での撮影・録音は禁止です。',
-    ],
+      '登壇者は予告なく変更となる場合があります。'
+    ]
   },
+  {
+    id: 7,
+    date: '2025.12.25',
+    title: '公式サイトを更新しました',
+    image: '/images/news7.jpg',
+    body: [
+      '公式サイトの情報を更新しました。',
+      '今後も最新情報を順次公開予定です。'
+    ],
+    event: {
+      date: '2025年12月25日（木）',
+      place: '公式サイト',
+      content: 'サイト更新情報'
+    },
+    notes: [
+      '最新情報は公式サイトをご確認ください。'
+    ]
+  },
+  {
+    id: 8,
+    date: '2025.12.12',
+    title: 'キャラクター情報を追加公開しました',
+    image: '/images/news8.jpg',
+    body: [
+      'キャラクター紹介ページに新しい情報を追加しました。'
+    ],
+    event: {
+      date: '2025年12月12日（金）',
+      place: 'キャラクターページ',
+      content: 'キャラクター情報追加'
+    },
+    notes: [
+      '掲載内容は変更となる場合があります。'
+    ]
+  },
+  {
+    id: 9,
+    date: '2025.11.30',
+    title: 'グッズ情報を公開しました',
+    image: '/images/news9.jpg',
+    body: [
+      '関連グッズの情報を公開しました。'
+    ],
+    event: {
+      date: '2025年11月30日（日）',
+      place: '商品ページ',
+      content: 'グッズ情報公開'
+    },
+    notes: [
+      '商品画像はイメージです。'
+    ]
+  },
+  {
+    id: 10,
+    date: '2025.11.15',
+    title: 'ストーリーページを更新しました',
+    image: '/images/news10.png',
+    body: [
+      'ストーリーページの内容を更新しました。'
+    ],
+    event: {
+      date: '2025年11月15日（土）',
+      place: 'ストーリーページ',
+      content: 'ストーリー情報更新'
+    },
+    notes: [
+      '一部内容にはネタバレを含む場合があります。'
+    ]
+  },
+  {
+    id: 11,
+    date: '2025.10.28',
+    title: '場面カットを追加しました',
+    image: '/images/news11.jpg',
+    imagePosition: 'center 30%',
+    body: [
+      'ギャラリーページに新しい場面カットを追加しました。'
+    ],
+    event: {
+      date: '2025年10月28日（火）',
+      place: 'ギャラリーページ',
+      content: '場面カット追加'
+    },
+    notes: [
+      '画像は開発中のものを含む場合があります。'
+    ]
+  },
+  {
+    id: 12,
+    date: '2025.10.10',
+    title: 'スペシャルコンテンツを公開しました',
+    image: '/images/news12.jpg',
+    imagePosition: 'center 25%',
+    body: [
+      'スペシャルページに新しいコンテンツを公開しました。'
+    ],
+    event: {
+      date: '2025年10月10日（金）',
+      place: 'スペシャルページ',
+      content: 'スペシャルコンテンツ公開'
+    },
+    notes: [
+      '公開期間は変更となる場合があります。'
+    ]
+  }
 ]
+
+const displayedNews = computed(() => {
+  if (props.showFullPage) {
+    return newsList
+  }
+
+  return newsList.slice(0, 3)
+})
 
 function openNewsDetail(news) {
   selectedNews.value = news
+
+  if (typeof window !== 'undefined') {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'auto'
+    })
+  }
 }
 
-function closeNewsDetail() {
+function markSkipIntro() {
+  try {
+    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+    sessionStorage.setItem('atriSkipIntro', '1')
+    sessionStorage.setItem('introPlayed', 'true')
+  } catch {}
+}
+
+/**
+ * 新闻完整页右上角 BACK：
+ * 直接跳到首页 NEWS 模块。
+ * 首页 index.vue 会在白色遮罩还没消失时瞬间定位到 #news，
+ * 所以用户不会看到首页顶部闪一下。
+ */
+async function goHomeNewsSection() {
   selectedNews.value = null
+  markSkipIntro()
+
+  await router.replace({
+    path: '/',
+    hash: '#news'
+  })
 }
 
+/**
+ * 详情页右上角 ×：
+ * - 如果详情是在首页 NEWS 模块里打开的，不要先 selectedNews = null，
+ *   否则会先露出首页，造成闪一下。
+ *   直接跳到 /news，让详情遮罩保持到路由切换完成。
+ *
+ * - 如果详情是在 /news 完整新闻页打开的，才关闭详情，回到 12 个新闻卡片列表。
+ */
+async function closeDetailToNewsList() {
+  markSkipIntro()
+
+  if (!props.showFullPage) {
+    await router.replace('/news')
+    return
+  }
+
+  selectedNews.value = null
+
+  await nextTick()
+
+  if (typeof window !== 'undefined') {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'auto'
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -298,14 +493,6 @@ function closeNewsDetail() {
     radial-gradient(circle at 8% 10%, rgba(255, 255, 255, 0.98) 0 170px, transparent 172px),
     radial-gradient(circle at 92% 12%, rgba(232, 249, 255, 0.92) 0 130px, transparent 132px),
     linear-gradient(180deg, #ffffff 0%, #f7fcfe 42%, #e8f9ff 100%);
-  background-position:
-    0 0,
-    0 0,
-    0 0;
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%;
 }
 
 .news-detail-bubbles {
@@ -474,5 +661,4 @@ function closeNewsDetail() {
     transform: translateY(-22vh);
   }
 }
-
 </style>

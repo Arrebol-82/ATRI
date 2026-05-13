@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import { homeNavItems } from '~/constants/navigation'
@@ -17,13 +17,22 @@ const router = useRouter()
 const route = useRoute()
 
 const MERCHANDISE_RETURN_TARGET_KEY = 'atriMerchandiseReturnTarget'
+const MERCHANDISE_PRODUCTS_STORAGE_KEY = 'atriMerchandiseProductsCache'
+const MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY = 'atriMerchandiseProductsCacheTime'
+const MERCHANDISE_PRODUCTS_CACHE_MAX_AGE = 1000 * 60 * 60 * 24
 
-const { data: products, pending, error } = await useFetch('/api/merchandise')
+const merchandiseCache = useState('merchandise-products-cache', () => [])
+const merchandisePreloaded = useState('merchandise-products-preloaded', () => false)
+const merchandisePreloading = useState('merchandise-products-preloading', () => false)
+
+const products = computed(() => merchandiseCache.value)
+const pending = ref(!merchandiseCache.value.length)
+const error = ref(null)
 
 const checkoutSteps = [
-  { key: 'order', label: '下单' },
-  { key: 'confirm', label: '确认订单' },
-  { key: 'pay', label: '支付' }
+  { key: 'order', label: 'Order' },
+  { key: 'confirm', label: 'Confirm' },
+  { key: 'pay', label: 'Pay' }
 ]
 
 const currentStepIndex = computed(() => checkoutSteps.findIndex((step) => step.key === checkoutStep.value))
@@ -54,6 +63,7 @@ const totalPriceDisplay = computed(() => {
 
 const canConfirmOrder = computed(() => customerName.value.trim() && deliveryAddress.value.trim())
 const cardNumberDigits = computed(() => cardNumber.value.replace(/\D/g, ''))
+
 const canCompletePayment = computed(() => {
   if (paymentMethod.value !== 'card') {
     return true
@@ -67,6 +77,117 @@ watch(paymentMethod, (method) => {
     clearSensitivePayment()
   }
 })
+
+watch(merchandiseCache, (value) => {
+  if (Array.isArray(value) && value.length) {
+    pending.value = false
+    error.value = null
+  }
+})
+
+onMounted(() => {
+  restoreMerchandiseProductsFromStorage()
+  loadMerchandiseProducts()
+})
+
+function readMerchandiseProductsFromStorage() {
+  if (!import.meta.client) {
+    return []
+  }
+
+  try {
+    const raw = localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_KEY)
+    const savedAt = Number(localStorage.getItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY) || 0)
+
+    if (!raw || !savedAt) {
+      return []
+    }
+
+    const isExpired = Date.now() - savedAt > MERCHANDISE_PRODUCTS_CACHE_MAX_AGE
+    if (isExpired) {
+      return []
+    }
+
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveMerchandiseProductsToStorage(productList) {
+  if (!import.meta.client || !Array.isArray(productList)) {
+    return
+  }
+
+  try {
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_KEY, JSON.stringify(productList))
+    localStorage.setItem(MERCHANDISE_PRODUCTS_STORAGE_TIME_KEY, String(Date.now()))
+  } catch {
+    // localStorage 可能因为隐私模式或容量限制失败，失败时不影响页面正常显示。
+  }
+}
+
+function applyMerchandiseProducts(productList) {
+  const normalizedProducts = Array.isArray(productList) ? productList : []
+
+  merchandiseCache.value = normalizedProducts
+
+  if (normalizedProducts.length) {
+    merchandisePreloaded.value = true
+    pending.value = false
+    error.value = null
+    saveMerchandiseProductsToStorage(normalizedProducts)
+  }
+}
+
+function restoreMerchandiseProductsFromStorage() {
+  if (merchandiseCache.value.length) {
+    pending.value = false
+    error.value = null
+    return
+  }
+
+  const cachedProducts = readMerchandiseProductsFromStorage()
+
+  if (cachedProducts.length) {
+    merchandiseCache.value = cachedProducts
+    merchandisePreloaded.value = true
+    pending.value = false
+    error.value = null
+  }
+}
+
+async function loadMerchandiseProducts() {
+  const hasVisibleProducts = merchandiseCache.value.length > 0
+
+  if (hasVisibleProducts) {
+    pending.value = false
+    error.value = null
+  } else {
+    pending.value = true
+    error.value = null
+  }
+
+  if (merchandisePreloading.value) {
+    return
+  }
+
+  try {
+    merchandisePreloading.value = true
+    const data = await $fetch('/api/merchandise')
+
+    applyMerchandiseProducts(data)
+  } catch (err) {
+    if (!hasVisibleProducts) {
+      error.value = err
+      merchandisePreloaded.value = false
+    }
+  } finally {
+    pending.value = false
+    merchandisePreloading.value = false
+  }
+}
 
 function clearSensitivePayment() {
   cardNumber.value = ''
@@ -142,6 +263,7 @@ function skipHomeIntroOnce() {
   try {
     sessionStorage.setItem('atriSkipIntro', '1')
     sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+    sessionStorage.setItem('introPlayed', 'true')
   } catch {
     // The home page can still load normally if session storage is unavailable.
   }
@@ -199,18 +321,14 @@ function goBack() {
   skipHomeIntroOnce()
 
   const returnTarget = getMerchandiseReturnTarget()
+
   if (returnTarget) {
     clearMerchandiseReturnTarget()
-    navigateTo(returnTarget)
+    router.replace(returnTarget)
     return
   }
 
-  if (import.meta.client && window.history.state?.back) {
-    router.back()
-    return
-  }
-
-  navigateTo('/')
+  router.replace('/')
 }
 
 onBeforeRouteLeave((to) => {
@@ -221,7 +339,7 @@ onBeforeRouteLeave((to) => {
 </script>
 
 <template>
-  <main class="relative min-h-screen overflow-x-hidden bg-white px-6 py-8 text-[#102a3a] md:px-12 lg:px-[7.2vw]">
+  <main class="merchandise-page relative min-h-screen overflow-x-hidden bg-white px-6 py-8 text-[#102a3a] md:px-12 lg:px-[7.2vw]">
     <div class="side-caption side-caption-left" aria-hidden="true">
       <div class="side-caption-track side-caption-track-up">
         <span v-for="index in 12" :key="`left-${index}`">{{ sideCaptionText }}</span>
@@ -308,21 +426,22 @@ onBeforeRouteLeave((to) => {
                 :src="selectedProduct.imageUrl"
                 :alt="selectedProduct.name"
                 class="h-full w-full object-contain"
+                decoding="async"
               >
             </div>
 
             <div class="mt-6 grid gap-3 text-sm font-bold text-[#21485d] sm:grid-cols-3">
               <div class="checkout-fact">
-                <span>分类</span>
+                <span>Category</span>
                 <strong>{{ selectedProduct.category }}</strong>
               </div>
               <div class="checkout-fact">
-                <span>单价</span>
+                <span>Price</span>
                 <strong>{{ selectedProduct.priceDisplay }}</strong>
               </div>
               <div class="checkout-fact">
-                <span>库存</span>
-                <strong>可下单</strong>
+                <span>Stock</span>
+                <strong>Available</strong>
               </div>
             </div>
           </div>
@@ -330,10 +449,10 @@ onBeforeRouteLeave((to) => {
           <aside class="checkout-panel border-[4px] border-[#79d7f0] bg-white/88 p-5 shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
             <div v-if="checkoutStep === 'order'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">ORDER</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">下单</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Order</h3>
 
               <div class="mt-6 flex items-center justify-between gap-4 border-b border-[#c9edf8] pb-5">
-                <span class="text-sm font-black text-[#21485d]">数量</span>
+                <span class="text-sm font-black text-[#21485d]">Quantity</span>
                 <div class="flex h-11 items-center overflow-hidden rounded-full border-2 border-[#79d7f0] bg-[#e8f9ff]">
                   <button
                     type="button"
@@ -365,7 +484,7 @@ onBeforeRouteLeave((to) => {
               </div>
 
               <div class="mt-5 flex items-end justify-between gap-4">
-                <span class="text-sm font-black text-[#21485d]">小计</span>
+                <span class="text-sm font-black text-[#21485d]">Subtotal</span>
                 <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
               </div>
 
@@ -374,50 +493,50 @@ onBeforeRouteLeave((to) => {
                 class="checkout-primary mt-7"
                 @click="goToConfirm"
               >
-                确认订单
+                Confirm Order
               </button>
             </div>
 
             <div v-else-if="checkoutStep === 'confirm'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">CONFIRM</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">确认订单</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Confirm Order</h3>
 
               <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
                 <span aria-hidden="true">←</span>
-                返回上一步
+                Back
               </button>
 
               <label class="checkout-label mt-6">
-                <span>收货人</span>
-                <input v-model="customerName" type="text" autocomplete="name" placeholder="请输入姓名">
+                <span>Name</span>
+                <input v-model="customerName" type="text" autocomplete="name" placeholder="Enter your name">
               </label>
 
               <label class="checkout-label mt-4">
-                <span>收货地址</span>
-                <textarea v-model="deliveryAddress" rows="4" placeholder="请输入收货地址" />
+                <span>Address</span>
+                <textarea v-model="deliveryAddress" rows="4" placeholder="Enter delivery address" />
               </label>
 
               <div class="mt-5 space-y-3 border-t border-[#c9edf8] pt-5 text-sm font-bold text-[#21485d]">
                 <div class="flex justify-between gap-4">
-                  <span>商品</span>
+                  <span>Product</span>
                   <strong class="text-right">{{ selectedProduct.name }}</strong>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span>数量</span>
+                  <span>Quantity</span>
                   <strong>x {{ quantity }}</strong>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span>合计</span>
+                  <span>Total</span>
                   <strong class="text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
                 </div>
               </div>
 
               <div class="mt-7 grid grid-cols-2 gap-3">
                 <button type="button" class="checkout-secondary checkout-bottom-back" @click="backCheckoutStep">
-                  返回上一步
+                  Back
                 </button>
                 <button type="button" class="checkout-secondary" @click="backCheckoutStep">
-                  返回
+                  Back
                 </button>
                 <button
                   type="button"
@@ -425,74 +544,74 @@ onBeforeRouteLeave((to) => {
                   :disabled="!canConfirmOrder"
                   @click="goToPay"
                 >
-                  去支付
+                  Go to Pay
                 </button>
               </div>
             </div>
 
             <div v-else-if="checkoutStep === 'pay'">
               <p class="text-xs font-black tracking-[0.18em] text-[#2f9ecd]">PAYMENT</p>
-              <h3 class="mt-2 text-2xl font-black text-[#21485d]">支付</h3>
+              <h3 class="mt-2 text-2xl font-black text-[#21485d]">Payment</h3>
 
               <button type="button" class="checkout-back-link mt-4" @click="backCheckoutStep">
                 <span aria-hidden="true">←</span>
-                返回上一步
+                Back
               </button>
 
               <div class="mt-6 space-y-3">
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'card' }">
                   <input v-model="paymentMethod" type="radio" value="card">
-                  <span>银行卡</span>
+                  <span>Credit Card</span>
                 </label>
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'wallet' }">
                   <input v-model="paymentMethod" type="radio" value="wallet">
-                  <span>电子钱包</span>
+                  <span>E-Wallet</span>
                 </label>
                 <label class="payment-option" :class="{ 'payment-option-active': paymentMethod === 'cod' }">
                   <input v-model="paymentMethod" type="radio" value="cod">
-                  <span>到付</span>
+                  <span>Pay on Delivery</span>
                 </label>
               </div>
 
               <div v-if="paymentMethod === 'card'" class="checkout-card-fields mt-5">
                 <label class="checkout-label">
-                  <span>银行卡号</span>
+                  <span>Card Number</span>
                   <input
                     v-model="cardNumber"
                     type="text"
                     inputmode="numeric"
                     autocomplete="off"
                     maxlength="23"
-                    placeholder="请输入银行卡号"
+                    placeholder="Enter card number"
                   >
                 </label>
 
                 <label class="checkout-label mt-4">
-                  <span>支付密码</span>
+                  <span>Password</span>
                   <input
                     v-model="cardPassword"
                     type="password"
                     autocomplete="new-password"
                     maxlength="12"
-                    placeholder="请输入支付密码"
+                    placeholder="Enter payment password"
                   >
                 </label>
 
                 <p class="checkout-security-note mt-3">
-                  卡号和密码仅用于本次模拟支付，支付完成、返回或关闭后会立即清空，不会保存。
+                  Card number and password are only used for this demo payment. They will be cleared immediately after payment, when you go back, or close the window.
                 </p>
               </div>
 
               <div class="mt-6 rounded-[8px] bg-[#e8f9ff] p-4">
                 <div class="flex items-center justify-between gap-4">
-                  <span class="text-sm font-black text-[#21485d]">应付金额</span>
+                  <span class="text-sm font-black text-[#21485d]">Amount Due</span>
                   <strong class="text-2xl font-black text-[#2f9ecd]">{{ totalPriceDisplay }}</strong>
                 </div>
               </div>
 
               <div class="mt-7 grid grid-cols-2 gap-3">
                 <button type="button" class="checkout-secondary" @click="backCheckoutStep">
-                  返回
+                  Back
                 </button>
                 <button
                   type="button"
@@ -500,7 +619,7 @@ onBeforeRouteLeave((to) => {
                   :disabled="!canCompletePayment"
                   @click="completePayment"
                 >
-                  立即支付
+                  Pay Now
                 </button>
               </div>
             </div>
@@ -509,15 +628,14 @@ onBeforeRouteLeave((to) => {
 
         <div v-else class="checkout-done relative z-[1] mx-auto mt-8 max-w-[760px] border-[4px] border-[#79d7f0] bg-white/90 p-8 text-center shadow-[0_18px_42px_rgba(79,176,207,0.16)] backdrop-blur">
           <p class="text-xs font-black tracking-[0.22em] text-[#2f9ecd]">ORDER COMPLETE</p>
-          <h3 class="mt-3 text-[clamp(28px,5vw,46px)] font-black text-[#21485d]">支付完成</h3>
+          <h3 class="mt-3 text-[clamp(28px,5vw,46px)] font-black text-[#21485d]">Payment Complete</h3>
           <p class="mx-auto mt-4 max-w-[520px] text-sm font-bold leading-7 text-[#21485d]">
-            订单已生成，商品信息已确认。
+            Order confirmed. Your order details have been recorded.
           </p>
           <button type="button" class="checkout-primary mx-auto mt-7 max-w-[260px]" @click="closeCheckout">
-            完成
+            Done
           </button>
         </div>
-
       </section>
     </div>
 
@@ -544,12 +662,38 @@ onBeforeRouteLeave((to) => {
       </div>
 
       <div class="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <div v-if="pending" class="col-span-full py-20 text-center font-bold text-[#4fb0cf]">
-          正在连接数据库...
-        </div>
+        <template v-if="pending">
+          <article
+            v-for="index in 6"
+            :key="`skeleton-${index}`"
+            class="product-card pointer-events-none flex min-h-[430px] flex-col rounded-[14px] border-2 border-b-[6px] border-l-[6px] border-[#d3eef4] bg-white p-6 shadow-[0_4px_14px_rgba(91,174,201,0.08)]"
+          >
+            <div class="flex aspect-square items-center justify-center overflow-hidden rounded-[9px] border-2 border-[#dff2f6] bg-[#f7fcfe] p-3">
+              <div class="h-full w-full animate-pulse rounded-[8px] bg-[#e8f9ff]"></div>
+            </div>
+
+            <div class="mt-4 flex flex-1 flex-col px-3 py-4">
+              <div class="flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-[#b7e8f4]"></span>
+                <span class="h-4 w-24 animate-pulse rounded-full bg-[#d7f3fb]"></span>
+              </div>
+
+              <div class="mt-5 space-y-3">
+                <div class="h-5 w-full animate-pulse rounded-full bg-[#e8f9ff]"></div>
+                <div class="h-5 w-4/5 animate-pulse rounded-full bg-[#e8f9ff]"></div>
+                <div class="h-5 w-2/3 animate-pulse rounded-full bg-[#e8f9ff]"></div>
+              </div>
+
+              <div class="mt-auto pt-5">
+                <div class="h-4 w-32 animate-pulse rounded-full bg-[#d7f3fb]"></div>
+                <div class="mt-5 h-11 w-full animate-pulse rounded-full bg-[#b7e8f4]"></div>
+              </div>
+            </div>
+          </article>
+        </template>
 
         <div v-else-if="error" class="col-span-full py-20 text-center font-bold text-[#d45b6a]">
-          商品数据加载失败
+          Failed to load product data
         </div>
 
         <article
@@ -569,6 +713,7 @@ onBeforeRouteLeave((to) => {
               :alt="product.name"
               class="h-full w-full object-contain"
               loading="lazy"
+              decoding="async"
             >
           </div>
 
@@ -587,36 +732,10 @@ onBeforeRouteLeave((to) => {
             </p>
 
             <span class="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#5fb8d7] px-5 text-sm font-black tracking-[0.1em] text-white transition group-hover:bg-[#4fb0cf]">
-              下单
+              Order
             </span>
           </div>
         </article>
-      </div>
-    </section>
-
-    <section class="relative z-10 mx-auto mt-16 max-w-[1120px]">
-      <div class="nav-footer relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#fef7ff] to-white p-8">
-        <div class="nav-footer-pattern absolute inset-0 opacity-40" aria-hidden="true"></div>
-        
-        <div class="relative flex items-center justify-between">
-          <button class="nav-footer-btn nav-footer-btn-prev flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-left"></span>
-            </span>
-            <span class="text-sm font-black tracking-[0.25em]">PREV</span>
-          </button>
-
-          <button class="nav-footer-btn nav-footer-btn-all text-sm font-black tracking-[0.35em] text-[#765a78] transition hover:text-pink-400">
-            VIEW ALL
-          </button>
-
-          <button class="nav-footer-btn nav-footer-btn-next flex items-center gap-3 text-[#765a78] transition hover:text-pink-400">
-            <span class="text-sm font-black tracking-[0.25em]">NEXT</span>
-            <span class="flex h-12 w-12 items-center justify-center rounded-full bg-[#5fb8d7]">
-              <span class="nav-footer-arrow-right"></span>
-            </span>
-          </button>
-        </div>
       </div>
     </section>
   </main>
@@ -685,21 +804,21 @@ onBeforeRouteLeave((to) => {
 
 @keyframes side-caption-up {
   from {
-    transform: translate(-50%, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 
   to {
-    transform: translate(-50%, -50%);
+    transform: translate3d(-50%, -50%, 0);
   }
 }
 
 @keyframes side-caption-down {
   from {
-    transform: translate(-50%, -50%);
+    transform: translate3d(-50%, -50%, 0);
   }
 
   to {
-    transform: translate(-50%, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -778,6 +897,7 @@ onBeforeRouteLeave((to) => {
   padding: 0 18px 0 15px;
   box-shadow: 0 14px 34px rgba(79, 176, 207, 0.14);
   backdrop-filter: blur(10px);
+  will-change: transform;
   transition:
     background-color 0.32s ease,
     border-color 0.32s ease,
@@ -881,18 +1001,17 @@ onBeforeRouteLeave((to) => {
 .product-card {
   transform-origin: center;
   transition:
-    background-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    background-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .product-card:hover {
   border-color: #79d7f0;
   background-color: #e8f9ff;
-  box-shadow: 0 16px 34px rgba(79, 176, 207, 0.2);
-  transform: scale(1.025);
-  transition-duration: 0.26s;
+  box-shadow: 0 14px 30px rgba(79, 176, 207, 0.18);
+  transform: translateY(-4px) scale(1.015);
 }
 
 .product-card:focus-visible {
@@ -1078,7 +1197,9 @@ onBeforeRouteLeave((to) => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .checkout-bubbles span {
+  .checkout-bubbles span,
+  .side-caption-track-up,
+  .side-caption-track-down {
     animation: none;
     transform: translateY(-22vh);
   }
@@ -1367,81 +1488,5 @@ onBeforeRouteLeave((to) => {
   .side-caption {
     display: block;
   }
-}
-
-.nav-footer-pattern {
-  background-image: radial-gradient(circle, #ffcbdb 0 2px, transparent 3px);
-  background-size: 32px 32px;
-}
-
-.nav-footer-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.nav-footer-arrow-left {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-left::before,
-.nav-footer-arrow-left::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-left::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-left::after {
-  top: 4px;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-left: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(45deg);
-}
-
-.nav-footer-arrow-right {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-}
-
-.nav-footer-arrow-right::before,
-.nav-footer-arrow-right::after {
-  position: absolute;
-  content: "";
-  background: white;
-}
-
-.nav-footer-arrow-right::before {
-  top: 50%;
-  left: 0;
-  width: 14px;
-  height: 2px;
-  transform: translateY(-50%);
-}
-
-.nav-footer-arrow-right::after {
-  top: 4px;
-  right: 0;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid white;
-  border-bottom: 2px solid white;
-  transform: rotate(-45deg);
 }
 </style>

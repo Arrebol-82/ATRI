@@ -2,7 +2,7 @@ export default defineNuxtPlugin(() => {
   const skipHomeIntroKey = 'atriSkipHomeIntroOnce'
   const merchandiseReturnTargetKey = 'atriMerchandiseReturnTarget'
 
-  function markHomeIntroSkip() {
+  function markHomeIntroSkip(): void {
     try {
       sessionStorage.setItem(skipHomeIntroKey, '1')
     } catch {
@@ -10,7 +10,7 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  function getVisibleHomeSectionTarget() {
+  function getVisibleHomeSectionTarget(): string {
     if (window.location.pathname !== '/') {
       return `${window.location.pathname}${window.location.hash || ''}`
     }
@@ -33,7 +33,7 @@ export default defineNuxtPlugin(() => {
     return '/'
   }
 
-  function rememberMerchandiseReturnTarget() {
+  function rememberMerchandiseReturnTarget(): void {
     try {
       sessionStorage.setItem(merchandiseReturnTargetKey, getVisibleHomeSectionTarget())
     } catch {
@@ -41,8 +41,9 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  document.addEventListener('click', (event) => {
-    const link = event.target?.closest?.('a[href]')
+  document.addEventListener('click', (event: MouseEvent) => {
+    const target = event.target as HTMLElement
+    const link = target.closest?.('a[href]') as HTMLAnchorElement | null
     if (!link) return
 
     const url = new URL(link.href, window.location.href)
