@@ -319,18 +319,14 @@ function goBack() {
   skipHomeIntroOnce()
 
   const returnTarget = getMerchandiseReturnTarget()
+
   if (returnTarget) {
     clearMerchandiseReturnTarget()
-    navigateTo(returnTarget)
+    router.replace(returnTarget)
     return
   }
 
-  if (import.meta.client && window.history.state?.back) {
-    router.back()
-    return
-  }
-
-  navigateTo('/')
+  router.replace('/')
 }
 
 onBeforeRouteLeave((to) => {
@@ -740,8 +736,6 @@ onBeforeRouteLeave((to) => {
         </article>
       </div>
     </section>
-
-
   </main>
 </template>
 
@@ -1493,5 +1487,4 @@ onBeforeRouteLeave((to) => {
     display: block;
   }
 }
-
 </style>

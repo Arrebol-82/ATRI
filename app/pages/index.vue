@@ -348,7 +348,20 @@ onMounted(async () => {
     clearIntroSkipFlags()
 
     requestAnimationFrame(() => {
-      jumpToSectionImmediately(immediateTarget)
+      const didJump = jumpToSectionImmediately(immediateTarget)
+
+      // 关键修复：
+      // 从 /#news 进入首页时，先在白色遮罩下瞬间定位到目标模块。
+      // 然后马上清掉地址栏里的 hash。
+      // 这样用户看到的仍然是直接回到新闻模块，
+      // 但刷新页面时地址栏已经恢复成 /，开场动画不会被吞掉。
+      if (didJump && typeof window !== 'undefined' && window.location.hash) {
+        window.history.replaceState(
+          window.history.state,
+          '',
+          `${window.location.pathname}${window.location.search}`
+        )
+      }
 
       bootMaskVisible.value = false
 

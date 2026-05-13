@@ -19,7 +19,7 @@
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
-            <!-- 详情页只保留关闭按钮：关闭后回到 12 个新闻展示框 -->
+            <!-- 详情页关闭按钮 -->
             <div class="mb-6 flex items-center justify-end">
               <button
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
@@ -117,7 +117,7 @@
             </p>
           </div>
 
-          <!-- 新闻完整页右上角 BACK：直接回首页 NEWS 模块 -->
+          <!-- 新闻完整页右上角 BACK：返回首页 NEWS 模块 -->
           <button
             v-if="showFullPage"
             class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
@@ -442,7 +442,9 @@ function markSkipIntro() {
 
 /**
  * 新闻完整页右上角 BACK：
- * 直接跳到首页 NEWS 模块，不再手动先回首页再二次滚动。
+ * 直接跳到首页 NEWS 模块。
+ * 首页 index.vue 会在白色遮罩还没消失时瞬间定位到 #news，
+ * 所以用户不会看到首页顶部闪一下。
  */
 async function goHomeNewsSection() {
   selectedNews.value = null
@@ -456,18 +458,23 @@ async function goHomeNewsSection() {
 
 /**
  * 详情页右上角 ×：
- * 只关闭详情，回到当前 /news 的 12 个新闻展示框。
+ * - 如果详情是在首页 NEWS 模块里打开的，不要先 selectedNews = null，
+ *   否则会先露出首页，造成闪一下。
+ *   直接跳到 /news，让详情遮罩保持到路由切换完成。
+ *
+ * - 如果详情是在 /news 完整新闻页打开的，才关闭详情，回到 12 个新闻卡片列表。
  */
 async function closeDetailToNewsList() {
-  selectedNews.value = null
   markSkipIntro()
 
-  await nextTick()
-
   if (!props.showFullPage) {
-    await router.push('/news')
+    await router.replace('/news')
     return
   }
+
+  selectedNews.value = null
+
+  await nextTick()
 
   if (typeof window !== 'undefined') {
     window.scrollTo({

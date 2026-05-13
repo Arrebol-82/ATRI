@@ -58,11 +58,6 @@
                   class="block h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.045]"
                   draggable="false"
                 >
-                <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(8,16,34,0.22),transparent_45%),linear-gradient(to_bottom,rgba(255,255,255,0.06),transparent_34%)]"></div>
-
-                <span class="absolute bottom-3 right-4 text-[9px] tracking-[0.18em] text-white/70">
-                  VISUAL ARTS/Key
-                </span>
               </div>
 
               <div class="mt-3 flex items-center justify-between">
@@ -90,11 +85,6 @@
               :alt="`Scene ${activeScene.id}`"
               class="scene-main-image block h-full w-full object-cover"
             >
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,.02),rgba(255,255,255,.06)_58%,rgba(255,255,255,.16))]"></div>
-
-            <div class="absolute bottom-4 right-5 text-[10px] tracking-[0.25em] text-cyan-500/80">
-              © VISUAL ARTS / Key
-            </div>
           </div>
         </section>
 
