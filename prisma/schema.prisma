@@ -11,11 +11,12 @@ datasource db {
 
 // 下面是你之前写的模型，保持不动即可
 model Merchandise {
-  id               String   @id @default(uuid())
+  id               String   @id @default(cuid())
   name             String
   category         String
   priceDisplay     String
   imageDescription String
   imageUrl         String
   createdAt        DateTime @default(now())
+  sortOrder        Int      @default(0) 
 }

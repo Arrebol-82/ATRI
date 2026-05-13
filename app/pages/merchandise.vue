@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import HomeSidebar from '~/components/site/HomeSidebar.vue'
+import { homeNavItems } from '~/constants/navigation'
 
 const sideCaptionText = 'ATRIMyDearMoments'
 const selectedProduct = ref(null)

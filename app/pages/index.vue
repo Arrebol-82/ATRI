@@ -1,8 +1,8 @@
 <script setup>
 import { gsap } from 'gsap'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import CharactersSection from '~/components/CharactersSection.vue'
-import HomeSidebar from '~/components/HomeSidebar.vue'
+import CharactersSection from '~/components/site/CharactersSection.vue'
+import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import Footer from '~/components/Footer.vue'
 import { homeNavItems } from '~/constants/navigation'
 import NewsSection from './news.vue'

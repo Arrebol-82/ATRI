@@ -11,13 +11,18 @@ defineEmits<{
 
 <template>
   <header class="mb-8 flex items-center justify-between stagger-card">
-    <h1 class="text-3xl font-extrabold tracking-tight">{{ title }}</h1>
+    <h1
+      class="text-3xl font-extrabold tracking-tight transition-colors duration-300"
+      :class="isDark ? 'text-white' : 'text-gray-800'"
+    >
+      {{ title }}
+    </h1>
 
     <div class="flex items-center gap-4">
       <button
         type="button"
-        class="flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-600 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md"
-        :class="isDark ? 'bg-[#171923] text-[#dbeafe]' : 'bg-white text-gray-600'"
+        class="flex h-11 w-11 items-center justify-center rounded-full shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md"
+        :class="isDark ? 'bg-[#171923] text-[#dbeafe] shadow-black/25 ring-1 ring-white/10' : 'bg-white text-gray-600'"
         :aria-label="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
         @click="$emit('toggle-theme')"
       >
@@ -49,7 +54,8 @@ defineEmits<{
       <img
         src="https://api.dicebear.com/7.x/notionists/svg?seed=Alpenglow"
         alt="Avatar"
-        class="h-10 w-10 rounded-full bg-white shadow-sm"
+        class="h-10 w-10 rounded-full shadow-sm transition-all duration-300"
+        :class="isDark ? 'bg-[#171923] shadow-black/25 ring-1 ring-white/10' : 'bg-white'"
       >
     </div>
   </header>
