@@ -10,6 +10,7 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
+    types: false,
     redirectOptions: {
       login: "/admin",
       callback: "/confirm",
