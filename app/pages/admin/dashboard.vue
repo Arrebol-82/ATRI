@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
-import * as echarts from "echarts";
+import type { ECharts } from "echarts/core";
 import { gsap } from "gsap";
 
 definePageMeta({
@@ -12,8 +12,8 @@ const barChartRef = ref<HTMLElement | null>(null);
 const pieChartRef = ref<HTMLElement | null>(null);
 const isDark = useState("admin-dark-mode", () => false);
 
-let barChart: echarts.ECharts | null = null;
-let pieChart: echarts.ECharts | null = null;
+let barChart: ECharts | null = null;
+let pieChart: ECharts | null = null;
 
 function updateChartsTheme(nextIsDark: boolean) {
   const labelColor = nextIsDark ? "#a7b0c2" : "#9ca3af";
@@ -53,7 +53,7 @@ const worstSelling = [
   { name: "收藏贴纸包", percent: 5 },
 ];
 
-onMounted(() => {
+onMounted(async () => {
   gsap.from(".stagger-card", {
     y: 40,
     opacity: 0,
@@ -62,8 +62,18 @@ onMounted(() => {
     ease: "power3.out",
   });
 
+  const [{ init, use }, { BarChart, PieChart }, { GridComponent }, { CanvasRenderer }] =
+    await Promise.all([
+      import("echarts/core"),
+      import("echarts/charts"),
+      import("echarts/components"),
+      import("echarts/renderers"),
+    ]);
+
+  use([BarChart, PieChart, GridComponent, CanvasRenderer]);
+
   if (barChartRef.value) {
-    barChart = echarts.init(barChartRef.value);
+    barChart = init(barChartRef.value);
     barChart.setOption({
       grid: { left: "10%", right: "0%", bottom: "10%", top: "10%" },
       xAxis: {
@@ -96,7 +106,7 @@ onMounted(() => {
   }
 
   if (pieChartRef.value) {
-    pieChart = echarts.init(pieChartRef.value);
+    pieChart = init(pieChartRef.value);
     pieChart.setOption({
       series: [
         {

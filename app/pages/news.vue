@@ -1,6 +1,6 @@
 <template>
   <section
-    :id="!showFullPage ? 'news' : undefined"
+    ref="newsPageRoot"
     class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]"
   >
     <!-- 背景装饰 -->
@@ -11,15 +11,19 @@
     </div>
 
     <!-- 新闻详情页 -->
-    <div v-if="selectedNews" class="fixed inset-0 z-[60] overflow-y-auto bg-white">
+    <div
+      v-if="selectedNews"
+      ref="detailOverlay"
+      class="news-detail-page relative z-[60] bg-white"
+      tabindex="-1"
+    >
       <article class="news-detail relative min-h-screen w-full overflow-hidden p-6 text-[#263f48] md:p-10 lg:p-14">
         <div class="news-detail-bubbles" aria-hidden="true">
-          <span v-for="i in 12" :key="i" />
+          <span v-for="i in 6" :key="i" />
         </div>
 
         <div class="relative z-[1] mx-auto max-w-[900px]">
           <div class="rounded-[28px] border-2 border-sky-200 bg-white/95 px-7 py-9 shadow-[0_18px_50px_rgba(56,189,248,0.12)] md:px-12 md:py-12">
-            <!-- 详情页关闭按钮 -->
             <div class="mb-6 flex items-center justify-end">
               <button
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
@@ -39,6 +43,8 @@
                 :src="selectedNews.image"
                 :alt="selectedNews.title"
                 class="h-full w-full object-cover"
+                loading="eager"
+                decoding="async"
                 :style="{ objectPosition: selectedNews.imagePosition || 'center' }"
               />
             </div>
@@ -103,8 +109,11 @@
       </article>
     </div>
 
-    <!-- 新闻列表页 -->
-    <div class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24">
+    <!-- 新闻列表页 / 新闻模块首页内容 -->
+    <div
+      v-else
+      class="relative z-10 mx-auto max-w-[1200px] px-6 py-20 md:px-10 lg:py-24"
+    >
       <header class="mb-14">
         <div class="flex items-center justify-between">
           <div class="flex items-end gap-6">
@@ -117,10 +126,10 @@
             </p>
           </div>
 
-          <!-- 新闻完整页右上角 BACK：返回首页 NEWS 模块 -->
           <button
             v-if="showFullPage"
-            class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-all hover:bg-sky-50 hover:shadow-md"
+            class="news-back-btn flex items-center gap-2 rounded-full border-2 border-sky-300 bg-white/80 px-4 py-2 text-sm font-bold tracking-[0.1em] text-sky-500 transition-[background-color,box-shadow] hover:bg-sky-50 hover:shadow-md disabled:cursor-wait disabled:opacity-80"
+            :disabled="isRouteChanging"
             @click="goHomeNewsSection"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,12 +141,11 @@
       </header>
 
       <main>
-        <!-- 首页：3 个；新闻页：12 个 -->
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           <article
             v-for="item in displayedNews"
             :key="item.id"
-            class="group cursor-pointer rounded-xl border-2 border-sky-300 bg-white p-4 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400 hover:shadow-lg"
+            class="news-card group cursor-pointer rounded-xl border-2 border-sky-300 bg-white p-4 transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 hover:border-sky-400 hover:shadow-lg"
             @click="openNewsDetail(item)"
           >
             <div class="relative aspect-[16/9] overflow-hidden rounded-lg">
@@ -145,6 +153,9 @@
                 :src="item.image"
                 :alt="item.title"
                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                decoding="async"
+                :loading="item.id <= 3 ? 'eager' : 'lazy'"
+                :fetchpriority="item.id <= 3 ? 'high' : 'low'"
                 :style="{ objectPosition: item.imagePosition || 'center' }"
               />
 
@@ -163,11 +174,12 @@
           </article>
         </div>
 
-        <!-- MORE 按钮：只在首页模块显示 -->
         <div v-if="!showFullPage" class="mt-14 flex justify-center">
-          <NuxtLink
-            to="/news"
-            class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+          <button
+            type="button"
+            class="group flex h-14 w-[200px] items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-sky-300 px-8 py-4 text-sm font-black tracking-[0.4em] text-white shadow-lg transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-xl disabled:cursor-wait disabled:opacity-90"
+            :disabled="isRouteChanging"
+            @click="goNewsFullPage"
           >
             <span>MORE</span>
 
@@ -176,7 +188,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </span>
-          </NuxtLink>
+          </button>
         </div>
       </main>
     </div>
@@ -184,9 +196,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const router = useRouter()
+const newsReturnMaskVisible = useState('news-return-mask-visible', () => false)
 
 const props = defineProps({
   showFullPage: {
@@ -196,6 +209,12 @@ const props = defineProps({
 })
 
 const selectedNews = ref(null)
+const isRouteChanging = ref(false)
+const newsPageRoot = ref(null)
+const detailOverlay = ref(null)
+
+let scrollFrame = null
+let scrollTimer = null
 
 const newsList = [
   {
@@ -231,9 +250,7 @@ const newsList = [
       place: '後日公開予定',
       content: 'スペシャルトーク、最新情報発表など'
     },
-    notes: [
-      '詳細は後日発表いたします。'
-    ]
+    notes: ['詳細は後日発表いたします。']
   },
   {
     id: 3,
@@ -249,9 +266,7 @@ const newsList = [
       place: '公式SNS',
       content: 'フォロー＆リポストキャンペーン'
     },
-    notes: [
-      '応募には公式SNSアカウントのフォローが必要です。'
-    ]
+    notes: ['応募には公式SNSアカウントのフォローが必要です。']
   },
   {
     id: 4,
@@ -267,43 +282,33 @@ const newsList = [
       place: '公式サイト内',
       content: '追加キャンペーン情報公開'
     },
-    notes: [
-      'キャンペーン内容は変更となる可能性があります。'
-    ]
+    notes: ['キャンペーン内容は変更となる可能性があります。']
   },
   {
     id: 5,
     date: '2026.02.13',
     title: '【ゲーマーズ限定】Blu-ray全巻購入キャンペーンのお知らせ',
     image: '/images/news5.jpg',
-    body: [
-      'Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'
-    ],
+    body: ['Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'],
     event: {
       date: '2026年2月13日（金）開始',
       place: '対象店舗',
       content: 'Blu-ray購入者限定特典キャンペーン'
     },
-    notes: [
-      '特典はなくなり次第終了となります。'
-    ]
+    notes: ['特典はなくなり次第終了となります。']
   },
   {
     id: 6,
     date: '2026.01.19',
     title: 'スタッフ＆キャストによるトークイベント情報を公開しました',
     image: '/images/news6.jpg',
-    body: [
-      'スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'
-    ],
+    body: ['スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'],
     event: {
       date: '2026年1月19日（月）',
       place: 'イベント会場',
       content: 'スタッフ＆キャストトーク'
     },
-    notes: [
-      '登壇者は予告なく変更となる場合があります。'
-    ]
+    notes: ['登壇者は予告なく変更となる場合があります。']
   },
   {
     id: 7,
@@ -319,60 +324,46 @@ const newsList = [
       place: '公式サイト',
       content: 'サイト更新情報'
     },
-    notes: [
-      '最新情報は公式サイトをご確認ください。'
-    ]
+    notes: ['最新情報は公式サイトをご確認ください。']
   },
   {
     id: 8,
     date: '2025.12.12',
     title: 'キャラクター情報を追加公開しました',
     image: '/images/news8.jpg',
-    body: [
-      'キャラクター紹介ページに新しい情報を追加しました。'
-    ],
+    body: ['キャラクター紹介ページに新しい情報を追加しました。'],
     event: {
       date: '2025年12月12日（金）',
       place: 'キャラクターページ',
       content: 'キャラクター情報追加'
     },
-    notes: [
-      '掲載内容は変更となる場合があります。'
-    ]
+    notes: ['掲載内容は変更となる場合があります。']
   },
   {
     id: 9,
     date: '2025.11.30',
     title: 'グッズ情報を公開しました',
     image: '/images/news9.jpg',
-    body: [
-      '関連グッズの情報を公開しました。'
-    ],
+    body: ['関連グッズの情報を公開しました。'],
     event: {
       date: '2025年11月30日（日）',
       place: '商品ページ',
       content: 'グッズ情報公開'
     },
-    notes: [
-      '商品画像はイメージです。'
-    ]
+    notes: ['商品画像はイメージです。']
   },
   {
     id: 10,
     date: '2025.11.15',
     title: 'ストーリーページを更新しました',
     image: '/images/news10.png',
-    body: [
-      'ストーリーページの内容を更新しました。'
-    ],
+    body: ['ストーリーページの内容を更新しました。'],
     event: {
       date: '2025年11月15日（土）',
       place: 'ストーリーページ',
       content: 'ストーリー情報更新'
     },
-    notes: [
-      '一部内容にはネタバレを含む場合があります。'
-    ]
+    notes: ['一部内容にはネタバレを含む場合があります。']
   },
   {
     id: 11,
@@ -380,17 +371,13 @@ const newsList = [
     title: '場面カットを追加しました',
     image: '/images/news11.jpg',
     imagePosition: 'center 30%',
-    body: [
-      'ギャラリーページに新しい場面カットを追加しました。'
-    ],
+    body: ['ギャラリーページに新しい場面カットを追加しました。'],
     event: {
       date: '2025年10月28日（火）',
       place: 'ギャラリーページ',
       content: '場面カット追加'
     },
-    notes: [
-      '画像は開発中のものを含む場合があります。'
-    ]
+    notes: ['画像は開発中のものを含む場合があります。']
   },
   {
     id: 12,
@@ -398,17 +385,13 @@ const newsList = [
     title: 'スペシャルコンテンツを公開しました',
     image: '/images/news12.jpg',
     imagePosition: 'center 25%',
-    body: [
-      'スペシャルページに新しいコンテンツを公開しました。'
-    ],
+    body: ['スペシャルページに新しいコンテンツを公開しました。'],
     event: {
       date: '2025年10月10日（金）',
       place: 'スペシャルページ',
       content: 'スペシャルコンテンツ公開'
     },
-    notes: [
-      '公開期間は変更となる場合があります。'
-    ]
+    notes: ['公開期間は変更となる場合があります。']
   }
 ]
 
@@ -420,16 +403,79 @@ const displayedNews = computed(() => {
   return newsList.slice(0, 3)
 })
 
-function openNewsDetail(news) {
+function nextFrame() {
+  if (typeof window === 'undefined') return Promise.resolve()
+
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(resolve)
+  })
+}
+
+function setWindowTop() {
+  if (typeof window === 'undefined') return
+
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: 'auto'
+  })
+
+  document.documentElement.scrollTop = 0
+  document.body.scrollTop = 0
+
+  if (newsPageRoot.value) {
+    newsPageRoot.value.scrollTop = 0
+  }
+}
+
+function resetNewsPageTop() {
+  if (typeof window === 'undefined') return
+
+  if (scrollFrame) {
+    window.cancelAnimationFrame(scrollFrame)
+  }
+
+  if (scrollTimer) {
+    window.clearTimeout(scrollTimer)
+  }
+
+  scrollFrame = window.requestAnimationFrame(() => {
+    setWindowTop()
+
+    scrollTimer = window.setTimeout(() => {
+      setWindowTop()
+    }, 120)
+  })
+}
+
+function resetDetailTop() {
+  if (typeof window === 'undefined') return
+
+  window.requestAnimationFrame(() => {
+    if (props.showFullPage) {
+      setWindowTop()
+    } else if (detailOverlay.value) {
+      detailOverlay.value.scrollIntoView({
+        block: 'start',
+        behavior: 'auto'
+      })
+    }
+
+    if (detailOverlay.value) {
+      detailOverlay.value.focus({
+        preventScroll: true
+      })
+    }
+  })
+}
+
+async function openNewsDetail(news) {
+  if (isRouteChanging.value) return
+
   selectedNews.value = news
 
-  if (typeof window !== 'undefined') {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'auto'
-    })
-  }
+  await nextTick()
+  resetDetailTop()
 }
 
 function markSkipIntro() {
@@ -440,54 +486,131 @@ function markSkipIntro() {
   } catch {}
 }
 
-/**
- * 新闻完整页右上角 BACK：
- * 直接跳到首页 NEWS 模块。
- * 首页 index.vue 会在白色遮罩还没消失时瞬间定位到 #news，
- * 所以用户不会看到首页顶部闪一下。
- */
-async function goHomeNewsSection() {
-  selectedNews.value = null
+async function goNewsFullPage() {
+  if (isRouteChanging.value) return
+
+  isRouteChanging.value = true
+  newsReturnMaskVisible.value = true
   markSkipIntro()
 
-  await router.replace({
-    path: '/',
-    hash: '#news'
-  })
+  try {
+    await nextTick()
+    await nextFrame()
+    await navigateTo('/news')
+  } catch (error) {
+    isRouteChanging.value = false
+    newsReturnMaskVisible.value = false
+    throw error
+  }
 }
 
-/**
- * 详情页右上角 ×：
- * - 如果详情是在首页 NEWS 模块里打开的，不要先 selectedNews = null，
- *   否则会先露出首页，造成闪一下。
- *   直接跳到 /news，让详情遮罩保持到路由切换完成。
- *
- * - 如果详情是在 /news 完整新闻页打开的，才关闭详情，回到 12 个新闻卡片列表。
- */
+async function goHomeNewsSection() {
+  if (isRouteChanging.value) return
+
+  isRouteChanging.value = true
+  selectedNews.value = null
+  newsReturnMaskVisible.value = true
+  markSkipIntro()
+
+  try {
+    sessionStorage.setItem('scrollToNews', '1')
+    sessionStorage.setItem('atriSkipHomeIntroOnce', '1')
+    sessionStorage.setItem('atriSkipIntro', '1')
+    sessionStorage.setItem('introPlayed', 'true')
+  } catch {}
+
+  try {
+    await nextTick()
+    await nextFrame()
+
+    await navigateTo('/?section=news', {
+      replace: true
+    })
+  } catch (error) {
+    isRouteChanging.value = false
+    newsReturnMaskVisible.value = false
+    throw error
+  }
+}
+
 async function closeDetailToNewsList() {
+  if (isRouteChanging.value) return
+
   markSkipIntro()
 
   if (!props.showFullPage) {
-    await router.replace('/news')
+    isRouteChanging.value = true
+    newsReturnMaskVisible.value = true
+
+    try {
+      await nextTick()
+      await nextFrame()
+      await router.replace('/news')
+    } catch (error) {
+      isRouteChanging.value = false
+      newsReturnMaskVisible.value = false
+      throw error
+    }
+
     return
   }
 
   selectedNews.value = null
 
   await nextTick()
-
-  if (typeof window !== 'undefined') {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'auto'
-    })
-  }
+  resetNewsPageTop()
 }
+
+async function setupFullNewsPage() {
+  if (!props.showFullPage) return
+
+  if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual'
+  }
+
+  await nextTick()
+  resetNewsPageTop()
+
+  window.setTimeout(() => {
+    newsReturnMaskVisible.value = false
+    isRouteChanging.value = false
+  }, 120)
+}
+
+onMounted(() => {
+  setupFullNewsPage()
+})
+
+onActivated(setupFullNewsPage)
+
+onBeforeUnmount(() => {
+  if (typeof window === 'undefined') return
+
+  if (scrollFrame) {
+    window.cancelAnimationFrame(scrollFrame)
+  }
+
+  if (scrollTimer) {
+    window.clearTimeout(scrollTimer)
+  }
+})
 </script>
 
 <style scoped>
+.news-card {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  content-visibility: auto;
+  contain-intrinsic-size: 320px;
+}
+
+.news-detail-page {
+  min-height: 100vh;
+  outline: none;
+}
+
 .news-detail {
+  contain: paint;
   background-color: #ffffff;
   background-image:
     radial-gradient(circle at 8% 10%, rgba(255, 255, 255, 0.98) 0 170px, transparent 172px),
@@ -501,6 +624,7 @@ async function closeDetailToNewsList() {
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+  transform: translateZ(0);
 }
 
 .news-detail-bubbles span {
@@ -509,117 +633,65 @@ async function closeDetailToNewsList() {
   display: block;
   width: var(--bubble-size);
   height: var(--bubble-size);
-  border: 3px solid rgba(95, 184, 215, 0.58);
+  border: 2px solid rgba(95, 184, 215, 0.42);
   border-radius: 999px;
   background:
-    radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.98) 0 15%, transparent 16%),
-    radial-gradient(circle at 68% 72%, rgba(121, 215, 240, 0.32) 0 22%, transparent 24%),
-    rgba(232, 249, 255, 0.5);
-  box-shadow:
-    inset 0 0 34px rgba(255, 255, 255, 0.92),
-    0 18px 42px rgba(79, 176, 207, 0.2);
-  animation:
-    news-bubble-float var(--bubble-duration) linear infinite,
-    news-bubble-pulse 4.8s ease-in-out infinite;
+    radial-gradient(circle at 28% 26%, rgba(255, 255, 255, 0.9) 0 14%, transparent 16%),
+    rgba(232, 249, 255, 0.42);
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.72);
+  animation: news-bubble-float var(--bubble-duration) linear infinite;
   animation-delay: var(--bubble-delay);
   left: var(--bubble-left);
   opacity: var(--bubble-opacity);
+  will-change: transform;
 }
 
 .news-detail-bubbles span:nth-child(1) {
-  --bubble-size: 92px;
+  --bubble-size: 88px;
   --bubble-left: 6%;
-  --bubble-duration: 16s;
+  --bubble-duration: 18s;
   --bubble-delay: -4s;
-  --bubble-opacity: 0.72;
+  --bubble-opacity: 0.6;
 }
 
 .news-detail-bubbles span:nth-child(2) {
-  --bubble-size: 152px;
-  --bubble-left: 15%;
-  --bubble-duration: 21s;
+  --bubble-size: 132px;
+  --bubble-left: 18%;
+  --bubble-duration: 23s;
   --bubble-delay: -17s;
-  --bubble-opacity: 0.54;
+  --bubble-opacity: 0.42;
 }
 
 .news-detail-bubbles span:nth-child(3) {
-  --bubble-size: 62px;
-  --bubble-left: 24%;
-  --bubble-duration: 14s;
+  --bubble-size: 60px;
+  --bubble-left: 34%;
+  --bubble-duration: 16s;
   --bubble-delay: -9s;
-  --bubble-opacity: 0.68;
+  --bubble-opacity: 0.56;
 }
 
 .news-detail-bubbles span:nth-child(4) {
-  --bubble-size: 118px;
-  --bubble-left: 34%;
-  --bubble-duration: 19s;
+  --bubble-size: 112px;
+  --bubble-left: 57%;
+  --bubble-duration: 21s;
   --bubble-delay: -2s;
-  --bubble-opacity: 0.64;
-}
-
-.news-detail-bubbles span:nth-child(5) {
-  --bubble-size: 176px;
-  --bubble-left: 47%;
-  --bubble-duration: 24s;
-  --bubble-delay: -21s;
   --bubble-opacity: 0.48;
 }
 
-.news-detail-bubbles span:nth-child(6) {
-  --bubble-size: 78px;
-  --bubble-left: 57%;
-  --bubble-duration: 15s;
-  --bubble-delay: -12s;
-  --bubble-opacity: 0.7;
-}
-
-.news-detail-bubbles span:nth-child(7) {
-  --bubble-size: 136px;
-  --bubble-left: 66%;
-  --bubble-duration: 20s;
-  --bubble-delay: -7s;
-  --bubble-opacity: 0.58;
-}
-
-.news-detail-bubbles span:nth-child(8) {
-  --bubble-size: 88px;
+.news-detail-bubbles span:nth-child(5) {
+  --bubble-size: 150px;
   --bubble-left: 76%;
-  --bubble-duration: 17s;
-  --bubble-delay: -15s;
-  --bubble-opacity: 0.7;
-}
-
-.news-detail-bubbles span:nth-child(9) {
-  --bubble-size: 190px;
-  --bubble-left: 84%;
   --bubble-duration: 26s;
-  --bubble-delay: -25s;
-  --bubble-opacity: 0.46;
+  --bubble-delay: -21s;
+  --bubble-opacity: 0.36;
 }
 
-.news-detail-bubbles span:nth-child(10) {
-  --bubble-size: 58px;
-  --bubble-left: 91%;
-  --bubble-duration: 13s;
-  --bubble-delay: -5s;
-  --bubble-opacity: 0.76;
-}
-
-.news-detail-bubbles span:nth-child(11) {
-  --bubble-size: 110px;
-  --bubble-left: 3%;
-  --bubble-duration: 18s;
-  --bubble-delay: -23s;
-  --bubble-opacity: 0.58;
-}
-
-.news-detail-bubbles span:nth-child(12) {
+.news-detail-bubbles span:nth-child(6) {
   --bubble-size: 72px;
-  --bubble-left: 72%;
-  --bubble-duration: 14s;
-  --bubble-delay: -1s;
-  --bubble-opacity: 0.72;
+  --bubble-left: 91%;
+  --bubble-duration: 17s;
+  --bubble-delay: -12s;
+  --bubble-opacity: 0.58;
 }
 
 @keyframes news-bubble-float {
@@ -627,31 +699,26 @@ async function closeDetailToNewsList() {
     transform: translate3d(0, 0, 0) scale(0.92);
   }
 
-  25% {
-    transform: translate3d(44px, -30vh, 0) scale(1.04);
+  35% {
+    transform: translate3d(26px, -38vh, 0) scale(1.02);
   }
 
-  55% {
-    transform: translate3d(-38px, -62vh, 0) scale(1.1);
-  }
-
-  78% {
-    transform: translate3d(30px, -88vh, 0) scale(1);
+  70% {
+    transform: translate3d(-22px, -74vh, 0) scale(1.06);
   }
 
   100% {
-    transform: translate3d(-18px, calc(-100vh - 260px), 0) scale(0.94);
+    transform: translate3d(12px, calc(-100vh - 220px), 0) scale(0.96);
   }
 }
 
-@keyframes news-bubble-pulse {
-  0%,
-  100% {
-    filter: saturate(1) brightness(1);
+@media (max-width: 768px) {
+  .news-card {
+    content-visibility: visible;
   }
 
-  50% {
-    filter: saturate(1.25) brightness(1.08);
+  .news-detail-bubbles span:nth-child(n + 5) {
+    display: none;
   }
 }
 

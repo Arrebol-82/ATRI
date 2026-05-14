@@ -1,6 +1,16 @@
+<script setup>
+const newsReturnMaskVisible = useState('news-return-mask-visible', () => false)
+</script>
+
 <template>
   <div>
     <NuxtRouteAnnouncer />
+
+    <div
+      v-if="newsReturnMaskVisible"
+      class="news-return-mask"
+      aria-hidden="true"
+    />
 
     <NuxtLayout>
       <Transition name="page-fade" mode="out-in">
@@ -11,8 +21,12 @@
 </template>
 
 <style>
-html {
-  scroll-behavior: smooth;
+.news-return-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: white;
+  pointer-events: none;
 }
 
 .page-fade-enter-active,
