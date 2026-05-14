@@ -1,5 +1,7 @@
 ﻿<script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from "vue";
+<script setup lang="ts">
+import { ref, computed, onBeforeUnmount, onMounted, nextTick } from "vue";
 import { gsap } from "gsap";
 
 definePageMeta({
@@ -387,6 +389,18 @@ const getStatusLabel = (status: Order["status"]) => {
   }
 };
 
+// --- GSAP 动画 ---
+function handleDocumentClick(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+  if (
+    !target.closest(".status-dropdown") &&
+    !target.closest(".filter-dropdown")
+  ) {
+    isStatusDropdownOpen.value = false;
+    isFilterDropdownOpen.value = false;
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     gsap.from(".stagger-card", {
@@ -407,16 +421,11 @@ onMounted(() => {
     });
   });
 
-  document.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    if (
-      !target.closest(".status-dropdown") &&
-      !target.closest(".filter-dropdown")
-    ) {
-      isStatusDropdownOpen.value = false;
-      isFilterDropdownOpen.value = false;
-    }
-  });
+  document.addEventListener("click", handleDocumentClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDocumentClick);
 });
 </script>
 

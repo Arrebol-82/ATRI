@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import * as echarts from "echarts";
+import { ref, onMounted, onUnmounted } from "vue";
+import type { ECharts } from "echarts/core";
 import { gsap } from "gsap";
 
 definePageMeta({
@@ -62,8 +64,8 @@ const productSalesChartData = computed(() => {
   }));
 });
 
-let barChart: echarts.ECharts | null = null;
-let pieChart: echarts.ECharts | null = null;
+let barChart: ECharts | null = null;
+let pieChart: ECharts | null = null;
 
 function updateBarChartData() {
   barChart?.setOption({
@@ -175,6 +177,7 @@ const slowSelling = computed(() => {
 });
 
 onMounted(() => {
+onMounted(async () => {
   gsap.from(".stagger-card", {
     y: 40,
     opacity: 0,
@@ -183,8 +186,18 @@ onMounted(() => {
     ease: "power3.out",
   });
 
+  const [{ init, use }, { BarChart, PieChart }, { GridComponent }, { CanvasRenderer }] =
+    await Promise.all([
+      import("echarts/core"),
+      import("echarts/charts"),
+      import("echarts/components"),
+      import("echarts/renderers"),
+    ]);
+
+  use([BarChart, PieChart, GridComponent, CanvasRenderer]);
+
   if (barChartRef.value) {
-    barChart = echarts.init(barChartRef.value);
+    barChart = init(barChartRef.value);
     barChart.setOption({
       grid: { left: "10%", right: "0%", bottom: "10%", top: "10%" },
       tooltip: {
@@ -230,7 +243,7 @@ onMounted(() => {
   }
 
   if (pieChartRef.value) {
-    pieChart = echarts.init(pieChartRef.value);
+    pieChart = init(pieChartRef.value);
     pieChart.setOption({
       series: [
         {

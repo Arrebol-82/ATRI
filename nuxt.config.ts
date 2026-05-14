@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "shadcn-nuxt", "@nuxtjs/supabase"],
+  modules: ["@nuxtjs/tailwindcss", "shadcn-nuxt", "@nuxtjs/supabase", "@vercel/analytics", "@vercel/speed-insights"],
   app: {
     head: {
       title: "ATRI",
@@ -14,6 +14,7 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
+    types: false,
     redirectOptions: {
       login: "/admin",
       callback: "/confirm",

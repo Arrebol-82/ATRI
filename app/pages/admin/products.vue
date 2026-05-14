@@ -1,5 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { gsap } from "gsap";
 
 type MerchandiseProduct = {
@@ -131,7 +133,13 @@ function handleStatusChange(
   product: MerchandiseProduct,
   action: "list" | "unlist",
 ) {
-  console.log(`Action: ${action} for product ID: ${product.id}`);
+  const selectedProduct = products.value.find((item) => item.id === product.id);
+  if (!selectedProduct) {
+    return;
+  }
+
+  // 当前商品 API 只读，先保留按钮交互入口，避免生产环境输出调试日志。
+  void action;
 }
 
 function animateProducts() {
@@ -151,6 +159,13 @@ function animateProducts() {
   });
 }
 
+function handleDocumentClick(e: MouseEvent) {
+  const target = e.target as HTMLElement;
+  if (!target.closest(".filter-dropdown")) {
+    isFilterOpen.value = false;
+  }
+}
+
 onMounted(() => {
   gsap.from(".stagger-card", {
     y: 30,
@@ -161,12 +176,11 @@ onMounted(() => {
   });
   animateProducts();
 
-  document.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest(".filter-dropdown")) {
-      isFilterOpen.value = false;
-    }
-  });
+  document.addEventListener("click", handleDocumentClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDocumentClick);
 });
 
 watch(filteredProducts, () => {
