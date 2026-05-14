@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import * as echarts from "echarts";
-import { ref, onMounted, onUnmounted } from "vue";
 import type { ECharts } from "echarts/core";
-import { gsap } from "gsap";
+import gsap from "gsap";
 
 definePageMeta({
   layout: "admin",
@@ -53,7 +52,7 @@ const categoryChartData = computed(() =>
     value: item.percentage,
     name: item.category,
     itemStyle: { color: item.color },
-  }))
+  })),
 );
 const productSalesChartData = computed(() => {
   const salesProducts = dashboardData.value?.salesProducts ?? [];
@@ -112,7 +111,7 @@ const inventoryData = computed(() => {
   const popularProducts = dashboardData.value?.popularProducts ?? [];
   const maxStock = Math.max(
     ...popularProducts.map((product: any) => Number(product.stock) || 0),
-    1
+    1,
   );
 
   return popularProducts.map((product: any) => {
@@ -138,7 +137,7 @@ const bestSelling = computed(() => {
   const topProducts = popularProducts.slice(0, 3);
   const maxSoldQuantity = Math.max(
     ...topProducts.map((product: any) => Number(product.soldQuantity) || 0),
-    1
+    1,
   );
 
   return topProducts.map((product: any) => {
@@ -162,7 +161,7 @@ const slowSelling = computed(() => {
   const slowProducts = dashboardData.value?.slowProducts ?? [];
   const maxSoldQuantity = Math.max(
     ...slowProducts.map((product: any) => Number(product.soldQuantity) || 0),
-    1
+    1,
   );
 
   return slowProducts.map((product: any) => {
@@ -176,7 +175,6 @@ const slowSelling = computed(() => {
   });
 });
 
-onMounted(() => {
 onMounted(async () => {
   gsap.from(".stagger-card", {
     y: 40,
@@ -186,13 +184,17 @@ onMounted(async () => {
     ease: "power3.out",
   });
 
-  const [{ init, use }, { BarChart, PieChart }, { GridComponent }, { CanvasRenderer }] =
-    await Promise.all([
-      import("echarts/core"),
-      import("echarts/charts"),
-      import("echarts/components"),
-      import("echarts/renderers"),
-    ]);
+  const [
+    { init, use },
+    { BarChart, PieChart },
+    { GridComponent },
+    { CanvasRenderer },
+  ] = await Promise.all([
+    import("echarts/core"),
+    import("echarts/charts"),
+    import("echarts/components"),
+    import("echarts/renderers"),
+  ]);
 
   use([BarChart, PieChart, GridComponent, CanvasRenderer]);
 

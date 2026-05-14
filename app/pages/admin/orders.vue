@@ -1,8 +1,13 @@
 ﻿<script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from "vue";
-<script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted, nextTick } from "vue";
-import { gsap } from "gsap";
+import {
+  ref,
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  nextTick,
+  watch,
+} from "vue";
+import gsap from "gsap";
 
 definePageMeta({
   layout: "admin",
@@ -35,9 +40,12 @@ type OrderRecord = {
   createdAt: string;
 };
 
-const { data: orderRecords } = await useFetch<OrderRecord[]>("/api/orders/list", {
-  default: () => [],
-});
+const { data: orderRecords } = await useFetch<OrderRecord[]>(
+  "/api/orders/list",
+  {
+    default: () => [],
+  },
+);
 
 const numberFormatter = new Intl.NumberFormat("ja-JP");
 const totalOrderCount = computed(() => orderRecords.value.length);
@@ -120,7 +128,15 @@ const isFilterDropdownOpen = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-const typeOptions = ["全部类型", "周边", "亚克力立牌", "海报", "挂件", "Merch", "Poster"];
+const typeOptions = [
+  "全部类型",
+  "周边",
+  "亚克力立牌",
+  "海报",
+  "挂件",
+  "Merch",
+  "Poster",
+];
 
 const timeRangeOptions = [
   { label: "全部时间", value: "all" },
@@ -232,7 +248,6 @@ function checkPriceRange(price: string): boolean {
       return true;
   }
 }
-
 
 watch(
   [
@@ -820,7 +835,9 @@ onBeforeUnmount(() => {
                       : 'text-gray-900 border-gray-100'
                   "
                 >
-                  <th class="pb-4 pl-2 text-center font-black w-[18%]">商品名称</th>
+                  <th class="pb-4 pl-2 text-center font-black w-[18%]">
+                    商品名称
+                  </th>
                   <th class="pb-4 text-center font-black w-[10%]">类型</th>
                   <th class="pb-4 text-center font-black w-[10%]">订单数量</th>
                   <th class="pb-4 text-center font-black w-[10%]">状态</th>

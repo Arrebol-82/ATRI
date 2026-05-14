@@ -250,6 +250,9 @@ const handleSystemThemeChange = (e: MediaQueryListEvent) => {
 };
 
 onMounted(() => {
+  // 隐藏 admin 页面的浏览器滚动条
+  document.documentElement.classList.add("hide-body-scrollbar");
+
   window.addEventListener("keydown", checkKonamiCode);
 
   if (window.matchMedia) {
@@ -261,6 +264,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.documentElement.classList.remove("hide-body-scrollbar");
+
   window.removeEventListener("keydown", checkKonamiCode);
   if (mediaQuery) {
     mediaQuery.removeEventListener("change", handleSystemThemeChange);
@@ -306,7 +311,7 @@ const navItems = [
 
 <template>
   <div
-    class="relative flex h-screen w-full overflow-hidden transition-colors duration-500"
+    class="relative flex min-h-screen w-full transition-colors duration-500"
     :class="isDark ? 'bg-[#000000]' : 'bg-[#f8f9fa]'"
   >
     <!-- 背景层 -->
@@ -327,7 +332,9 @@ const navItems = [
       class="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
     >
       <div class="text-center">
-        <h2 class="text-4xl font-black tracking-tighter text-white drop-shadow-lg animate-pulse">
+        <h2
+          class="text-4xl font-black tracking-tighter text-white drop-shadow-lg animate-pulse"
+        >
           ✨
         </h2>
         <p
@@ -342,7 +349,7 @@ const navItems = [
     <!-- 侧边栏 -->
     <aside
       v-if="!isLoginPage && !isEasterEggActive"
-      class="z-10 flex h-screen w-[84px] shrink-0 flex-col items-center border-r py-10 transition-colors duration-500"
+      class="sticky top-0 z-10 flex h-screen w-[84px] shrink-0 flex-col items-center border-r py-10 transition-colors duration-500"
       :class="
         isDark
           ? 'border-white/10 bg-[#0a0a0f]/80 backdrop-blur-md'
@@ -408,7 +415,7 @@ const navItems = [
 
     <main
       v-show="!isEasterEggActive"
-      class="relative z-10 hide-scrollbar flex-1 overflow-y-auto"
+      class="relative z-10 flex-1 min-w-0 transition-colors duration-500"
     >
       <slot />
     </main>
@@ -420,10 +427,15 @@ a,
 button {
   -webkit-tap-highlight-color: transparent;
 }
-.hide-scrollbar {
-  scrollbar-width: none;
+</style>
+
+<style>
+/* 隐藏 admin 页面的浏览器滚动条 */
+.hide-body-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+.hide-body-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 </style>

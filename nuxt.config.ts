@@ -2,7 +2,12 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "shadcn-nuxt", "@nuxtjs/supabase", "@vercel/analytics", "@vercel/speed-insights"],
+  modules: [
+    "@nuxtjs/tailwindcss",
+    "@nuxtjs/supabase",
+    "@nuxtjs/color-mode",
+    "shadcn-nuxt",
+  ],
   app: {
     head: {
       title: "ATRI",
@@ -23,12 +28,12 @@ export default defineNuxtConfig({
   components: {
     dirs: [
       {
-        path: '~/components',
-        pathPrefix: false
-      }
-    ]
+        path: "~/components",
+        pathPrefix: false,
+      },
+    ],
   },
   typescript: {
-    shim: false
-  }
-})
+    shim: false,
+  },
+});

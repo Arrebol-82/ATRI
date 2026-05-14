@@ -1,8 +1,13 @@
 ﻿<script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
-<script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { gsap } from "gsap";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
+import gsap from "gsap";
 
 type MerchandiseProduct = {
   id: string;
@@ -56,7 +61,10 @@ const {
 const totalProducts = computed(() => products.value.length);
 
 const totalStock = computed(() =>
-  products.value.reduce((sum, product) => sum + (Number(product.stock) || 0), 0),
+  products.value.reduce(
+    (sum, product) => sum + (Number(product.stock) || 0),
+    0,
+  ),
 );
 
 const categoryList = computed(() => {
@@ -424,7 +432,9 @@ watch(filteredProducts, () => {
                   ]"
                   @click="selectCategory(category)"
                 >
-                  <span v-if="selectedCategory === category" class="mr-2">✓</span>
+                  <span v-if="selectedCategory === category" class="mr-2"
+                    >✓</span
+                  >
                   <span :class="{ 'ml-5': selectedCategory !== category }">{{
                     category
                   }}</span>
