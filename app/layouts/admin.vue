@@ -4,9 +4,13 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 
 const route = useRoute();
 const supabase = useSupabaseClient();
-// 核心：使用 Nuxt 全局状态控制明暗模式
 const isDark = useState("admin-dark-mode", () => false);
 const isEasterEggActive = ref(false);
+const isPageLoading = ref(false);
+
+const nuxtApp = useNuxtApp();
+nuxtApp.hook("page:start", () => { isPageLoading.value = true; });
+nuxtApp.hook("page:finish", () => { isPageLoading.value = false; });
 
 // 判断是否是登录页
 const isLoginPage = computed(() => {
@@ -417,7 +421,41 @@ const navItems = [
       v-show="!isEasterEggActive"
       class="relative z-10 flex-1 min-w-0 transition-colors duration-500"
     >
-      <slot />
+      <div v-show="!isPageLoading">
+        <slot />
+      </div>
+
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isPageLoading"
+          class="flex flex-col items-center justify-center gap-4"
+          style="height: 100vh"
+        >
+          <svg
+            class="h-9 w-9 animate-spin"
+            :class="isDark ? 'text-[#715df2]' : 'text-[#5b4eff]'"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
+            <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p
+            class="text-[13px] font-black tracking-widest"
+            :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+          >
+            加载中...
+          </p>
+        </div>
+      </Transition>
     </main>
   </div>
 </template>

@@ -18,6 +18,18 @@ type MerchandiseProduct = {
   imageUrl: string;
   createdAt?: string | Date;
   stock?: number | null;
+  sortOrder?: number | null;
+};
+
+type EditProductForm = {
+  id: string;
+  name: string;
+  category: string;
+  priceDisplay: string;
+  imageDescription: string;
+  imageUrl: string;
+  stock: number;
+  sortOrder: number;
 };
 
 definePageMeta({
@@ -27,6 +39,19 @@ definePageMeta({
 
 const isDark = useState("admin-dark-mode", () => false);
 const searchQuery = ref("");
+const isEditModalOpen = ref(false);
+const isSavingProduct = ref(false);
+const editError = ref("");
+const editForm = ref<EditProductForm>({
+  id: "",
+  name: "",
+  category: "",
+  priceDisplay: "",
+  imageDescription: "",
+  imageUrl: "",
+  stock: 0,
+  sortOrder: 0,
+});
 
 function toggleTheme() {
   isDark.value = !isDark.value;
@@ -54,6 +79,7 @@ const {
   data: products,
   pending,
   error,
+  refresh: refreshProducts,
 } = await useFetch<MerchandiseProduct[]>("/api/merchandise", {
   default: () => [],
 });
@@ -146,8 +172,88 @@ function handleStatusChange(
     return;
   }
 
-  // 当前商品 API 只读，先保留按钮交互入口，避免生产环境输出调试日志。
-  void action;
+  if (action === "unlist") {
+    openEditModal(selectedProduct);
+    return;
+  }
+
+  deleteProduct(selectedProduct);
+}
+
+function openEditModal(product: MerchandiseProduct) {
+  editError.value = "";
+  editForm.value = {
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    priceDisplay: product.priceDisplay,
+    imageDescription: product.imageDescription ?? "",
+    imageUrl: product.imageUrl,
+    stock: Number(product.stock) || 0,
+    sortOrder: Number(product.sortOrder) || 0,
+  };
+  isEditModalOpen.value = true;
+}
+
+async function deleteProduct(product: MerchandiseProduct) {
+  const isConfirmed = window.confirm(`确定要下架并删除「${product.name}」吗？`);
+  if (!isConfirmed) {
+    return;
+  }
+
+  try {
+    await $fetch(`/api/admin/products/${encodeURIComponent(product.id)}`, {
+      method: "DELETE",
+    });
+
+    await refreshProducts();
+    animateProducts();
+  } catch (error: any) {
+    window.alert(
+      error?.statusMessage || error?.data?.statusMessage || "商品删除失败",
+    );
+  }
+}
+
+function closeEditModal() {
+  isEditModalOpen.value = false;
+  editError.value = "";
+}
+
+async function saveProductEdit() {
+  if (isSavingProduct.value) {
+    return;
+  }
+
+  editError.value = "";
+  isSavingProduct.value = true;
+
+  try {
+    await $fetch<MerchandiseProduct>(
+      `/api/admin/products/${encodeURIComponent(editForm.value.id)}`,
+      {
+        method: "PATCH",
+        body: {
+          name: editForm.value.name,
+          category: editForm.value.category,
+          priceDisplay: editForm.value.priceDisplay,
+          imageDescription: editForm.value.imageDescription,
+          imageUrl: editForm.value.imageUrl,
+          stock: editForm.value.stock,
+          sortOrder: editForm.value.sortOrder,
+        },
+      },
+    );
+
+    await refreshProducts();
+    closeEditModal();
+    animateProducts();
+  } catch (error: any) {
+    editError.value =
+      error?.statusMessage || error?.data?.statusMessage || "商品更新失败";
+  } finally {
+    isSavingProduct.value = false;
+  }
 }
 
 function animateProducts() {
@@ -609,6 +715,150 @@ watch(filteredProducts, () => {
         </div>
       </div>
     </div>
+
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isEditModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-5 py-8 backdrop-blur-sm"
+        @click.self="closeEditModal"
+      >
+        <form
+          class="w-full max-w-[760px] overflow-hidden rounded-[28px] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)] ring-1"
+          :class="
+            isDark
+              ? 'bg-[#11131c] text-gray-100 ring-white/10'
+              : 'bg-white text-gray-900 ring-gray-100'
+          "
+          @submit.prevent="saveProductEdit"
+        >
+          <div class="flex items-start justify-between gap-5">
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.18em] text-[#5b4eff]">
+                Edit Product
+              </p>
+              <h2 class="mt-2 text-2xl font-black">修改商品</h2>
+            </div>
+            <button
+              type="button"
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+              :class="
+                isDark
+                  ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              "
+              @click="closeEditModal"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="mt-6 grid gap-4 md:grid-cols-2">
+            <label class="flex flex-col gap-2 text-sm font-black">
+              商品名称
+              <input
+                v-model="editForm.name"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                required
+              >
+            </label>
+
+            <label class="flex flex-col gap-2 text-sm font-black">
+              商品类型
+              <input
+                v-model="editForm.category"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                required
+              >
+            </label>
+
+            <label class="flex flex-col gap-2 text-sm font-black">
+              价格
+              <input
+                v-model="editForm.priceDisplay"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                required
+              >
+            </label>
+
+            <div class="grid grid-cols-2 gap-4">
+              <label class="flex flex-col gap-2 text-sm font-black">
+                库存
+                <input
+                  v-model.number="editForm.stock"
+                  min="0"
+                  type="number"
+                  class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                  :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                >
+              </label>
+
+              <label class="flex flex-col gap-2 text-sm font-black">
+                排序
+                <input
+                  v-model.number="editForm.sortOrder"
+                  min="0"
+                  type="number"
+                  class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                  :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                >
+              </label>
+            </div>
+
+            <label class="md:col-span-2 flex flex-col gap-2 text-sm font-black">
+              图片地址
+              <input
+                v-model="editForm.imageUrl"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                required
+              >
+            </label>
+
+            <label class="md:col-span-2 flex flex-col gap-2 text-sm font-black">
+              图片描述
+              <textarea
+                v-model="editForm.imageDescription"
+                rows="3"
+                class="resize-none rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+              />
+            </label>
+          </div>
+
+          <p v-if="editError" class="mt-4 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-black text-red-500">
+            {{ editError }}
+          </p>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              class="rounded-2xl px-6 py-3 text-sm font-black transition-colors"
+              :class="isDark ? 'bg-white/5 text-gray-200 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              @click="closeEditModal"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              class="rounded-2xl bg-[#5b4eff] px-7 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(91,78,255,0.28)] transition-all hover:bg-[#4d42db] disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="isSavingProduct"
+            >
+              {{ isSavingProduct ? "保存中..." : "保存修改" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Transition>
   </div>
 </template>
 

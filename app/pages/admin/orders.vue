@@ -40,7 +40,7 @@ type OrderRecord = {
   createdAt: string;
 };
 
-const { data: orderRecords } = await useFetch<OrderRecord[]>(
+const { data: orderRecords, refresh: refreshOrders } = await useFetch<OrderRecord[]>(
   "/api/orders/list",
   {
     default: () => [],
@@ -373,6 +373,64 @@ function hasActiveFilters(): boolean {
 function goToPage(page: number) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
+  }
+}
+
+// --- 查看详情 ---
+const viewingOrder = ref<Order | null>(null);
+const isUpdatingStatus = ref(false);
+
+function openOrderDetail(order: Order) {
+  viewingOrder.value = order;
+}
+
+function closeOrderDetail() {
+  viewingOrder.value = null;
+}
+
+async function updateStatus(newStatus: Order["status"]) {
+  if (!viewingOrder.value || isUpdatingStatus.value) return;
+  isUpdatingStatus.value = true;
+  const orderId = viewingOrder.value.id;
+  const dbStatus = newStatus === "Shipped" ? "已发货" : "已取消";
+  try {
+    await $fetch(`/api/orders/${orderId}`, {
+      method: "PATCH",
+      body: { status: dbStatus },
+    });
+    await refreshOrders();
+    const fresh = orders.value.find((o) => o.id === orderId);
+    if (fresh) viewingOrder.value = fresh;
+  } finally {
+    isUpdatingStatus.value = false;
+  }
+}
+
+// --- 删除确认 ---
+const deletingOrderId = ref<string | null>(null);
+const isDeleting = ref(false);
+
+function openDeleteConfirm(orderId: string) {
+  deletingOrderId.value = orderId;
+}
+
+function closeDeleteConfirm() {
+  if (!isDeleting.value) {
+    deletingOrderId.value = null;
+  }
+}
+
+async function confirmDelete() {
+  if (!deletingOrderId.value) return;
+  isDeleting.value = true;
+  const idToDelete = deletingOrderId.value;
+  try {
+    await $fetch(`/api/orders/${idToDelete}`, { method: "DELETE" });
+    await refreshOrders();
+    deletingOrderId.value = null;
+    if (viewingOrder.value?.id === idToDelete) viewingOrder.value = null;
+  } finally {
+    isDeleting.value = false;
   }
 }
 
@@ -904,6 +962,7 @@ onBeforeUnmount(() => {
                             ? 'text-gray-400 hover:text-[#715df2]'
                             : 'text-gray-500 hover:text-[#5b4eff]'
                         "
+                        @click="openOrderDetail(order)"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -929,6 +988,7 @@ onBeforeUnmount(() => {
                       <button
                         class="flex items-center gap-1.5 transition-colors hover:text-red-500"
                         :class="isDark ? 'text-gray-400' : 'text-gray-500'"
+                        @click="openDeleteConfirm(order.id)"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -1040,6 +1100,209 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+
+  <!-- 查看详情面板 -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="viewingOrder"
+        class="fixed inset-0 z-50 flex"
+        @click.self="closeOrderDetail"
+      >
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeOrderDetail" />
+
+        <Transition
+          enter-active-class="transition duration-300 ease-out"
+          enter-from-class="translate-x-full"
+          enter-to-class="translate-x-0"
+          leave-active-class="transition duration-200 ease-in"
+          leave-from-class="translate-x-0"
+          leave-to-class="translate-x-full"
+        >
+          <div
+            v-if="viewingOrder"
+            class="relative ml-auto h-full w-1/2 min-w-[480px] flex flex-col shadow-2xl"
+            :class="isDark ? 'bg-[#11131c]' : 'bg-white'"
+          >
+            <!-- 头部 -->
+            <div
+              class="flex items-center justify-between px-8 py-6 border-b"
+              :class="isDark ? 'border-white/5' : 'border-gray-100'"
+            >
+              <div>
+                <p class="text-xs font-bold mb-1" :class="isDark ? 'text-gray-500' : 'text-gray-400'">订单编号</p>
+                <p class="text-[13px] font-black font-mono" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                  {{ viewingOrder.id }}
+                </p>
+              </div>
+              <button
+                @click="closeOrderDetail"
+                class="flex items-center justify-center w-9 h-9 rounded-full transition-colors"
+                :class="isDark ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- 状态标签 + 变更按钮 -->
+            <div class="px-8 pt-8 pb-4 flex items-center gap-4">
+              <div
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-black tracking-wider"
+                :class="getStatusStyles(viewingOrder.status, isDark)"
+              >
+                <span class="w-1.5 h-1.5 rounded-full bg-current" />
+                {{ getStatusLabel(viewingOrder.status) }}
+              </div>
+
+              <button
+                v-if="viewingOrder.status !== 'Shipped'"
+                @click="updateStatus('Shipped')"
+                :disabled="isUpdatingStatus"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-black tracking-wider transition-all disabled:opacity-60"
+                :class="isDark ? 'bg-[#1aa467]/15 text-[#34d399] hover:bg-[#1aa467]/25' : 'bg-[#e2f8ee] text-[#1aa467] hover:bg-[#c5f0dc]'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                标记为已发货
+              </button>
+
+              <button
+                v-if="viewingOrder.status !== 'Cancelled'"
+                @click="updateStatus('Cancelled')"
+                :disabled="isUpdatingStatus"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-black tracking-wider transition-all disabled:opacity-60"
+                :class="isDark ? 'bg-[#ef4444]/15 text-[#f87171] hover:bg-[#ef4444]/25' : 'bg-[#fee2e2] text-[#ef4444] hover:bg-[#fecaca]'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                标记为已取消
+              </button>
+
+              <svg v-if="isUpdatingStatus" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 animate-spin shrink-0" :class="isDark ? 'text-gray-400' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+
+            <!-- 详情列表 -->
+            <div class="flex-1 overflow-y-auto px-8 pb-8 space-y-5">
+              <div
+                v-for="item in [
+                  { label: '商品名称', value: viewingOrder.productName },
+                  { label: '商品类型', value: viewingOrder.type },
+                  { label: '订单数量', value: String(viewingOrder.quantity) + ' 件' },
+                  { label: '下单时间', value: viewingOrder.orderTime },
+                  { label: '订单金额', value: viewingOrder.price },
+                ]"
+                :key="item.label"
+                class="flex flex-col gap-1.5 rounded-2xl p-5"
+                :class="isDark ? 'bg-[#1a1d27]' : 'bg-gray-50'"
+              >
+                <p class="text-xs font-bold" :class="isDark ? 'text-gray-500' : 'text-gray-400'">{{ item.label }}</p>
+                <p class="text-[15px] font-black" :class="isDark ? 'text-gray-100' : 'text-gray-900'">{{ item.value }}</p>
+              </div>
+            </div>
+
+            <!-- 底部操作 -->
+            <div
+              class="px-8 py-6 border-t"
+              :class="isDark ? 'border-white/5' : 'border-gray-100'"
+            >
+              <button
+                @click="openDeleteConfirm(viewingOrder.id); closeOrderDetail()"
+                class="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-[13px] font-bold transition-colors text-red-500 hover:text-red-600"
+                :class="isDark ? 'bg-red-500/10 hover:bg-red-500/15' : 'bg-red-50 hover:bg-red-100'"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                删除此订单
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- 删除确认弹窗 -->
+  <Teleport to="body">
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="deletingOrderId"
+        class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        @click.self="closeDeleteConfirm"
+      >
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeDeleteConfirm" />
+
+        <Transition
+          enter-active-class="transition duration-200 ease-out"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div
+            v-if="deletingOrderId"
+            class="relative w-full max-w-sm rounded-3xl p-8 shadow-2xl"
+            :class="isDark ? 'bg-[#1a1d27] ring-1 ring-white/10' : 'bg-white'"
+          >
+            <div
+              class="flex items-center justify-center w-14 h-14 rounded-2xl mx-auto mb-5"
+              :class="isDark ? 'bg-red-500/10' : 'bg-red-50'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+
+            <h3 class="text-[17px] font-black text-center mb-2" :class="isDark ? 'text-gray-100' : 'text-gray-900'">
+              确认删除订单？
+            </h3>
+            <p class="text-[13px] text-center mb-8" :class="isDark ? 'text-gray-400' : 'text-gray-500'">
+              此操作不可撤销，订单数据将被永久删除。
+            </p>
+
+            <div class="flex gap-3">
+              <button
+                @click="closeDeleteConfirm"
+                :disabled="isDeleting"
+                class="flex-1 py-3 rounded-2xl text-[13px] font-bold transition-colors"
+                :class="isDark ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              >
+                取消
+              </button>
+              <button
+                @click="confirmDelete"
+                :disabled="isDeleting"
+                class="flex-1 py-3 rounded-2xl text-[13px] font-bold text-white transition-colors bg-red-500 hover:bg-red-600 disabled:opacity-60"
+              >
+                {{ isDeleting ? '删除中…' : '确认删除' }}
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
