@@ -7,6 +7,10 @@ export default defineNuxtConfig({
     head: {
       title: "ATRI",
     },
+    pageTransition: {
+      name: "page-fade",
+      mode: "out-in",
+    },
   },
   supabase: {
     redirect: false,

@@ -1,22 +1,45 @@
-// 1. 告诉 Prisma 生成 JS/TS 客户端代码
 generator client {
   provider = "prisma-client-js"
 }
 
-// 2. 告诉 Prisma 连接到你的 Supabase (PostgreSQL)
 datasource db {
   provider = "postgresql"
 }
 
-
-// 下面是你之前写的模型，保持不动即可
 model Merchandise {
-  id               String   @id @default(cuid())
+  id               String   @id
   name             String
   category         String
   priceDisplay     String
   imageDescription String
   imageUrl         String
   createdAt        DateTime @default(now())
-  sortOrder        Int      @default(0) 
+  sortOrder        Int      @default(0)
+  stock            Int      @default(100)   
+  orders           Order[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  merchandiseId String      
+  merchandise   Merchandise @relation(fields: [merchandiseId], references: [id])
+  productName   String
+  category      String      @default("Merch")
+  quantity      Int         @default(1)
+  amount        Float
+  status        String      @default("待处理")
+  customerInfo  String?
+  createdAt     DateTime    @default(now())
+}
+
+model Visit {
+  id        Int      @id @default(autoincrement())
+  path      String   @default("/")
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique // 周边、海报、挂件等
+  order Int    @default(0) // 用于前端显示的排序
 }

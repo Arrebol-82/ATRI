@@ -104,7 +104,7 @@ const navList = [
   { name: 'NEWS', link: '/news' },
   { name: 'STAFF&CAST', link: '#staff' },
   { name: 'INTRODUCTION', link: '#introduction' },
-  { name: 'CHARACTER', link: '/characters' },
+  { name: 'CHARACTER', link: '/#characters' },
   { name: 'BOOKS', link: '#books' },
   { name: 'STORY', link: '/story' },
   { name: 'ON AIR', link: '#onair' },

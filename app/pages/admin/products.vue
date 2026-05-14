@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { gsap } from "gsap";
 
@@ -10,6 +10,7 @@ type MerchandiseProduct = {
   imageDescription?: string | null;
   imageUrl: string;
   createdAt?: string | Date;
+  stock?: number | null;
 };
 
 definePageMeta({
@@ -17,7 +18,6 @@ definePageMeta({
   middleware: "auth",
 });
 
-// 绝对控制明暗模式
 const isDark = useState("admin-dark-mode", () => false);
 const searchQuery = ref("");
 
@@ -53,10 +53,9 @@ const {
 
 const totalProducts = computed(() => products.value.length);
 
-const totalCategories = computed(() => {
-  const categories = new Set(products.value.map((p) => p.category));
-  return categories.size;
-});
+const totalStock = computed(() =>
+  products.value.reduce((sum, product) => sum + (Number(product.stock) || 0), 0),
+);
 
 const categoryList = computed(() => {
   const categories = new Set(products.value.map((p) => p.category));
@@ -73,10 +72,11 @@ const categoryCounts = computed(() => {
 
 const categoryTrends = computed(() => {
   const trends: Record<string, { count: number; type: "up" | "down" }> = {};
-  trends["周边"] = { count: 2, type: "up" };
-  trends["海报"] = { count: 1, type: "down" };
-  trends["亚克力立牌"] = { count: 2, type: "down" };
-  trends["挂件"] = { count: 2, type: "down" };
+
+  Object.entries(categoryCounts.value).forEach(([category, count]) => {
+    trends[category] = { count, type: "up" };
+  });
+
   return trends;
 });
 
@@ -189,7 +189,6 @@ watch(filteredProducts, () => {
       @toggle-theme="toggleTheme"
     />
 
-    <!-- 第一模块：顶部数据卡片 -->
     <div class="grid grid-cols-1 gap-5 mb-10 sm:grid-cols-2 lg:grid-cols-3">
       <div
         class="stagger-card group relative flex flex-col justify-between rounded-[24px] p-6 min-h-[140px] transition-all duration-300 hover:-translate-y-1"
@@ -243,7 +242,7 @@ watch(filteredProducts, () => {
                 : 'text-gray-500 group-hover:text-white/90'
             "
           >
-            类型总数
+            总库存
           </div>
           <span
             class="px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-wide transition-colors duration-300"
@@ -253,11 +252,11 @@ watch(filteredProducts, () => {
                 : 'bg-[#e2f8ee] text-[#1aa467] group-hover:bg-green-400/20 group-hover:text-green-300'
             "
           >
-            ↑ {{ totalCategories }}类
+            ↑ {{ totalStock }}件
           </span>
         </div>
         <div class="mt-4 text-[34px] font-black tracking-tight">
-          {{ totalCategories }}
+          {{ totalStock }}
         </div>
       </div>
 
@@ -307,23 +306,18 @@ watch(filteredProducts, () => {
                     : 'bg-red-100 text-red-500 group-hover:bg-red-400/20 group-hover:text-red-200'
               "
             >
-              {{ categoryTrends[category]?.type === "up" ? "↑" : "↓" }}
-              {{ categoryTrends[category]?.count }}件
+              {{ categoryTrends[category]?.count ?? 0 }}件
             </span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 第二模块：整合了搜索和列表的文件夹容器 -->
     <div class="stagger-card tab-container relative">
-      <!-- 文件夹大容器 (Body) -->
       <div
         class="relative z-0 bg-[var(--bg-color)] rounded-[24px] p-6 transition-colors duration-500 shadow-[0_8px_30px_rgba(0,0,0,0.02)]"
       >
-        <!-- 操作栏 (搜索 & 筛选) -->
         <div class="flex flex-wrap items-center gap-4 mb-8">
-          <!-- 搜索框 -->
           <div class="relative flex-1 max-w-[420px] group-search">
             <div
               class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
@@ -357,7 +351,6 @@ watch(filteredProducts, () => {
             />
           </div>
 
-          <!-- 筛选按钮 -->
           <div class="relative z-20 filter-dropdown">
             <button
               class="flex items-center gap-2 rounded-full px-6 py-3.5 text-[13px] font-bold shadow-sm transition-all ring-1"
@@ -387,7 +380,6 @@ watch(filteredProducts, () => {
               筛选分类
             </button>
 
-            <!-- 下拉筛选面板 -->
             <Transition
               enter-active-class="transition duration-300 ease-out"
               enter-from-class="transform -translate-y-2 opacity-0"
@@ -418,9 +410,7 @@ watch(filteredProducts, () => {
                   ]"
                   @click="selectCategory(category)"
                 >
-                  <span v-if="selectedCategory === category" class="mr-2"
-                    >✓</span
-                  >
+                  <span v-if="selectedCategory === category" class="mr-2">✓</span>
                   <span :class="{ 'ml-5': selectedCategory !== category }">{{
                     category
                   }}</span>
@@ -429,11 +419,10 @@ watch(filteredProducts, () => {
             </Transition>
           </div>
 
-          <!-- 重置按钮 -->
           <button
             class="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#5b4eff] text-[#5b4eff] transition-all hover:bg-[#5b4eff]/10"
             @click="resetSearch"
-            title="重置检索"
+            title="重置搜索"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -451,7 +440,6 @@ watch(filteredProducts, () => {
             </svg>
           </button>
 
-          <!-- 统计计数 -->
           <p
             class="ml-auto text-[13px] font-bold"
             :class="isDark ? 'text-gray-400' : 'text-gray-500'"
@@ -460,7 +448,7 @@ watch(filteredProducts, () => {
               <span :class="isDark ? 'text-gray-100' : 'text-gray-900'">{{
                 selectedCategory
               }}</span>
-              分类下共
+              分类下共有
               <span class="text-[#5b4eff] font-black">{{
                 selectedCategoryCount
               }}</span>
@@ -476,7 +464,6 @@ watch(filteredProducts, () => {
           </p>
         </div>
 
-        <!-- 状态展示 -->
         <div
           v-if="pending"
           class="py-20 text-center text-sm font-bold text-[#5b4eff]"
@@ -516,11 +503,10 @@ watch(filteredProducts, () => {
           class="py-20 text-center text-sm font-bold"
           :class="isDark ? 'text-gray-500' : 'text-gray-400'"
         >
-          <span class="text-4xl block mb-2 opacity-50">📭</span>
+          <span class="text-4xl block mb-2 opacity-50">📥</span>
           没有找到匹配的商品
         </div>
 
-        <!-- 商品网格 -->
         <div
           v-else
           class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -535,7 +521,6 @@ watch(filteredProducts, () => {
                 : 'bg-white ring-gray-100 hover:ring-[#5b4eff]/30'
             "
           >
-            <!-- 图片区域 -->
             <div
               v-if="!product.name.includes('Acrylic Panel')"
               class="relative mb-4 flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[14px] p-3 transition-colors"
@@ -549,7 +534,6 @@ watch(filteredProducts, () => {
               />
             </div>
 
-            <!-- 分类标签 -->
             <div
               class="flex items-center gap-2 text-[11px] font-black tracking-[0.06em] text-[#5b4eff]"
             >
@@ -557,7 +541,6 @@ watch(filteredProducts, () => {
               <span>{{ product.category }}</span>
             </div>
 
-            <!-- 商品标题 -->
             <h3
               class="mt-3 line-clamp-2 min-h-[44px] text-[15px] font-black leading-snug"
               :class="isDark ? 'text-gray-100' : 'text-gray-900'"
@@ -566,7 +549,6 @@ watch(filteredProducts, () => {
               {{ product.name }}
             </h3>
 
-            <!-- 价格及时间信息 -->
             <div
               class="mt-3 flex flex-col gap-1.5 text-[12px] font-bold"
               :class="isDark ? 'text-gray-400' : 'text-gray-500'"
@@ -583,7 +565,6 @@ watch(filteredProducts, () => {
               </div>
             </div>
 
-            <!-- 操作按钮 -->
             <div class="mt-auto pt-6">
               <div class="flex items-center gap-2">
                 <button
@@ -608,23 +589,16 @@ watch(filteredProducts, () => {
 </template>
 
 <style scoped>
-/* 全局平滑过渡 */
 .products-page * {
   transition-property: background-color, border-color, color, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
 
-/* 搜索框图标 focus 联动 */
 .group-search-focus-within\:text-\[\#5b4eff\]:focus-within {
   color: #5b4eff;
 }
 
-/* =====================================================
-核心科技：异形 Tab 的平滑倒角 (Inverted Corner)
-通过 CSS 变量自动适配亮色与暗色模式
-=====================================================
-*/
 .tab-container {
   --bg-color: #ffffff;
 }

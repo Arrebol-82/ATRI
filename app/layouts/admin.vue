@@ -3,6 +3,7 @@ import { useRoute } from "vue-router";
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 
 const route = useRoute();
+const supabase = useSupabaseClient();
 // 核心：使用 Nuxt 全局状态控制明暗模式
 const isDark = useState("admin-dark-mode", () => false);
 const isEasterEggActive = ref(false);
@@ -75,6 +76,11 @@ const checkKonamiCode = (e: KeyboardEvent) => {
 const handleEasterEggClose = () => {
   isEasterEggActive.value = false;
   keySequence = [];
+};
+
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  await navigateTo("/admin");
 };
 
 // --- Canvas 星空引擎 ---
@@ -372,12 +378,15 @@ const navItems = [
       </nav>
       <div class="mt-auto flex flex-col items-center pb-4">
         <button
+          type="button"
           class="group flex h-[52px] w-[52px] items-center justify-center rounded-[18px] transition-all duration-300 ease-out"
           :class="
             isDark
               ? 'text-gray-500 hover:bg-red-500/15 hover:text-red-400'
               : 'text-gray-400 hover:bg-red-50 hover:text-red-500'
           "
+          aria-label="退出登录"
+          @click="handleLogout"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

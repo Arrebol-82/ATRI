@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from "vue";
+﻿<script setup lang="ts">
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { gsap } from "gsap";
 
 definePageMeta({
@@ -13,7 +13,6 @@ function toggleTheme() {
   isDark.value = !isDark.value;
 }
 
-// --- 模拟数据 ---
 interface Order {
   id: string;
   productName: string;
@@ -24,212 +23,91 @@ interface Order {
   price: string;
 }
 
-const orders = ref<Order[]>([
-  {
-    id: "ORD001",
-    productName: "ATRI Acrylic Stand",
-    type: "Merch",
-    quantity: 2,
-    status: "Shipped",
-    orderTime: "2026-05-09 14:30",
-    price: "JPY 6,600",
-  },
-  {
-    id: "ORD002",
-    productName: "Original Animation B2 Tapestry",
-    type: "Poster",
-    quantity: 1,
-    status: "Pending",
-    orderTime: "2026-05-09 10:15",
-    price: "JPY 500",
-  },
-  {
-    id: "ORD003",
-    productName: "Limited Keychains",
-    type: "Merch",
-    quantity: 5,
-    status: "Cancelled",
-    orderTime: "2026-05-08 16:45",
-    price: "JPY 15,000",
-  },
-  {
-    id: "ORD004",
-    productName: "Limited Keychains",
-    type: "Merch",
-    quantity: 2,
-    status: "Shipped",
-    orderTime: "2026-05-09 16:30",
-    price: "JPY 3,600",
-  },
-  {
-    id: "ORD005",
-    productName: "ATRI Acrylic Stand",
-    type: "Merch",
-    quantity: 2,
-    status: "Shipped",
-    orderTime: "2026-05-09 14:30",
-    price: "JPY 6,600",
-  },
-  {
-    id: "ORD006",
-    productName: "ATRI Character抱枕",
-    type: "周边",
-    quantity: 1,
-    status: "Pending",
-    orderTime: "2026-05-08 09:20",
-    price: "JPY 3,800",
-  },
-  {
-    id: "ORD007",
-    productName: "游戏原声 OST CD",
-    type: "周边",
-    quantity: 3,
-    status: "Shipped",
-    orderTime: "2026-05-07 15:45",
-    price: "JPY 4,200",
-  },
-  {
-    id: "ORD008",
-    productName: "ATRI 亚克力立牌套装",
-    type: "亚克力立牌",
-    quantity: 2,
-    status: "Cancelled",
-    orderTime: "2026-05-07 11:30",
-    price: "JPY 2,400",
-  },
-  {
-    id: "ORD009",
-    productName: "ATRI Visual Novel",
-    type: "周边",
-    quantity: 1,
-    status: "Shipped",
-    orderTime: "2026-05-06 18:00",
-    price: "JPY 5,500",
-  },
-  {
-    id: "ORD010",
-    productName: "ATRI 海报 A2",
-    type: "海报",
-    quantity: 4,
-    status: "Pending",
-    orderTime: "2026-05-06 10:15",
-    price: "JPY 2,000",
-  },
-  {
-    id: "ORD011",
-    productName: "ATRI 挂件套装",
-    type: "挂件",
-    quantity: 3,
-    status: "Shipped",
-    orderTime: "2026-05-05 14:20",
-    price: "JPY 1,800",
-  },
-  {
-    id: "ORD012",
-    productName: "ATRI 鼠标垫",
-    type: "周边",
-    quantity: 1,
-    status: "Cancelled",
-    orderTime: "2026-05-05 09:00",
-    price: "JPY 2,200",
-  },
-  {
-    id: "ORD013",
-    productName: "ATRI T恤 白色款",
-    type: "周边",
-    quantity: 2,
-    status: "Shipped",
-    orderTime: "2026-05-04 16:30",
-    price: "JPY 4,500",
-  },
-  {
-    id: "ORD014",
-    productName: "ATRI T恤 黑色款",
-    type: "周边",
-    quantity: 1,
-    status: "Pending",
-    orderTime: "2026-05-04 11:45",
-    price: "JPY 4,500",
-  },
-  {
-    id: "ORD015",
-    productName: "ATRI 马克杯",
-    type: "周边",
-    quantity: 2,
-    status: "Shipped",
-    orderTime: "2026-05-03 15:00",
-    price: "JPY 2,800",
-  },
-  {
-    id: "ORD016",
-    productName: "ATRI 艺术画框",
-    type: "周边",
-    quantity: 1,
-    status: "Pending",
-    orderTime: "2026-05-02 11:20",
-    price: "JPY 6,500",
-  },
-  {
-    id: "ORD017",
-    productName: "ATRI 限定徽章套装",
-    type: "周边",
-    quantity: 4,
-    status: "Shipped",
-    orderTime: "2026-05-02 09:15",
-    price: "JPY 3,200",
-  },
-  {
-    id: "ORD018",
-    productName: "ATRI 限定明信片",
-    type: "周边",
-    quantity: 10,
-    status: "Cancelled",
-    orderTime: "2026-05-01 16:40",
-    price: "JPY 2,000",
-  },
-  {
-    id: "ORD019",
-    productName: "ATRI 原画设定集",
-    type: "周边",
-    quantity: 1,
-    status: "Shipped",
-    orderTime: "2026-05-01 10:30",
-    price: "JPY 4,800",
-  },
-]);
+type OrderRecord = {
+  id: string;
+  productName: string;
+  category: string;
+  quantity: number;
+  amount: number;
+  status: string;
+  createdAt: string;
+};
 
-const stats = [
+const { data: orderRecords } = await useFetch<OrderRecord[]>("/api/orders/list", {
+  default: () => [],
+});
+
+const numberFormatter = new Intl.NumberFormat("ja-JP");
+const totalOrderCount = computed(() => orderRecords.value.length);
+
+function mapOrderStatus(status: string): Order["status"] {
+  if (status === "已发货") {
+    return "Shipped";
+  }
+
+  if (status === "已取消") {
+    return "Cancelled";
+  }
+
+  return "Pending";
+}
+
+function formatOrderTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(new Date(value))
+    .replace(/\//g, "-");
+}
+
+const orders = computed<Order[]>(() =>
+  orderRecords.value.map((order) => ({
+    id: order.id,
+    productName: order.productName,
+    type: order.category,
+    quantity: order.quantity,
+    status: mapOrderStatus(order.status),
+    orderTime: formatOrderTime(order.createdAt),
+    price: `JPY ${numberFormatter.format(Number(order.amount) || 0)}`,
+  })),
+);
+
+const stats = computed(() => [
   {
-    label: "总订单量",
-    value: "1,450",
-    trend: "↑ 1.67%",
+    label: "总订单",
+    value: totalOrderCount.value,
+    trend: "↑ 8",
     trendType: "up",
     isPrimary: true,
   },
   {
-    label: "已取消订单",
-    value: "82",
-    trend: "↓ 2.67%",
+    label: "已取消",
+    value: 0,
+    trend: "0",
     trendType: "down",
     isPrimary: false,
   },
   {
     label: "已完成订单",
-    value: "1,368",
-    trend: "↑ 1.2%",
+    value: 0,
+    trend: "0",
     trendType: "up",
     isPrimary: false,
   },
   {
-    label: "每周退货率对比",
-    value: "1.5%",
-    trend: "↓ 0.5%",
+    label: "每周退货率",
+    value: "0%",
+    trend: "0%",
     trendType: "down",
     isPrimary: false,
   },
-];
+]);
 
-// --- 搜索与筛选 ---
 const searchQuery = ref("");
 const selectedStatus = ref("订单状态");
 const isStatusDropdownOpen = ref(false);
@@ -240,25 +118,17 @@ const isFilterDropdownOpen = ref(false);
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-const typeOptions = [
-  "全部类型",
-  "周边",
-  "亚克力立牌",
-  "海报",
-  "挂件",
-  "Merch",
-  "Poster",
-];
+const typeOptions = ["全部类型", "周边", "亚克力立牌", "海报", "挂件", "Merch", "Poster"];
 
 const timeRangeOptions = [
-  { label: "全部时间", value: "全部时间" },
+  { label: "全部时间", value: "all" },
   { label: "今天", value: "today" },
   { label: "近7天", value: "week" },
   { label: "近30天", value: "month" },
 ];
 
 const priceRangeOptions = [
-  { label: "全部价格", value: "全部价格" },
+  { label: "全部价格", value: "all", min: 0, max: Infinity },
   { label: "¥0-¥1,000", value: "0-1000", min: 0, max: 1000 },
   { label: "¥1,000-¥3,000", value: "1000-3000", min: 1000, max: 3000 },
   { label: "¥3,000-¥5,000", value: "3000-5000", min: 3000, max: 5000 },
@@ -321,16 +191,19 @@ function checkTimeRange(orderTime: string): boolean {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   switch (selectedTimeRange.value) {
-    case "今天":
+    case "今天": {
       return orderDate.getTime() === today.getTime();
-    case "近7天":
+    }
+    case "近7天": {
       const weekAgo = new Date(today);
       weekAgo.setDate(weekAgo.getDate() - 7);
       return orderDate >= weekAgo;
-    case "近30天":
+    }
+    case "近30天": {
       const monthAgo = new Date(today);
       monthAgo.setDate(monthAgo.getDate() - 30);
       return orderDate >= monthAgo;
+    }
     default:
       return true;
   }
@@ -357,6 +230,7 @@ function checkPriceRange(price: string): boolean {
       return true;
   }
 }
+
 
 watch(
   [
@@ -485,7 +359,6 @@ function goToPage(page: number) {
   }
 }
 
-// --- 状态样式映射 (严格根据 isDark 切换) ---
 const getStatusStyles = (status: Order["status"], dark: boolean) => {
   switch (status) {
     case "Shipped":
@@ -514,7 +387,6 @@ const getStatusLabel = (status: Order["status"]) => {
   }
 };
 
-// --- GSAP 动画 ---
 onMounted(() => {
   nextTick(() => {
     gsap.from(".stagger-card", {
@@ -563,7 +435,6 @@ onMounted(() => {
       @toggle-theme="toggleTheme"
     />
 
-    <!-- 顶部数据看板 -->
     <div class="grid grid-cols-1 gap-5 mb-8 sm:grid-cols-2 lg:grid-cols-4">
       <div
         v-for="stat in stats"
@@ -613,9 +484,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 主体区域（使用你定制的 SVG 背景） -->
     <div class="relative mt-2.5">
-      <!-- 动态变色的 SVG 异形背景 -->
       <svg
         class="absolute inset-0"
         style="clip-path: inset(0 round 48px 48px 0 0); height: 286px"
@@ -631,9 +500,7 @@ onMounted(() => {
       </svg>
 
       <div class="relative z-10 p-6">
-        <!-- 操作栏 -->
         <div class="flex flex-wrap items-center gap-4 mb-[44px]">
-          <!-- 搜索框 -->
           <div class="relative flex-1 min-w-[280px] max-w-[420px] group-search">
             <span
               class="absolute inset-y-0 left-0 flex items-center pl-4 transition-colors group-search-focus-within:text-[#5b4eff]"
@@ -667,7 +534,6 @@ onMounted(() => {
             />
           </div>
 
-          <!-- 订单状态筛选 -->
           <div class="relative status-dropdown">
             <button
               type="button"
@@ -769,28 +635,17 @@ onMounted(() => {
                         <path
                           stroke-linecap="round"
                           stroke-linejoin="round"
-                          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a2.25 2.25 0 00-.659 1.591V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
                         />
                       </svg>
                     </span>
-                    <span>
-                      {{
-                        status === "Shipped"
-                          ? "已发货"
-                          : status === "Pending"
-                            ? "待处理"
-                            : status === "Cancelled"
-                              ? "已取消"
-                              : status
-                      }}
-                    </span>
+                    <span>{{ getStatusDisplayText(status) }}</span>
                   </button>
                 </div>
               </div>
             </Transition>
           </div>
 
-          <!-- 复杂筛选面板 -->
           <div class="relative filter-dropdown">
             <button
               type="button"
@@ -915,7 +770,6 @@ onMounted(() => {
             </Transition>
           </div>
 
-          <!-- 右侧统计小丸子 -->
           <div class="ml-auto -mt-[40px]">
             <div
               class="inline-flex items-center gap-2 px-5 py-[12px] rounded-full shadow-sm transition-colors duration-500"
@@ -929,7 +783,7 @@ onMounted(() => {
                 class="text-[13px] font-bold"
                 :class="isDark ? 'text-gray-300' : 'text-gray-800'"
               >
-                商品总量:
+                订单总量:
                 <span class="font-black text-[#5b4eff]">{{
                   filteredOrders.length
                 }}</span>
@@ -939,7 +793,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- 动态变色的表格大容器 -->
         <div
           class="overflow-hidden -mx-6 px-6 pt-6 transition-colors duration-500"
           :style="{
@@ -958,9 +811,7 @@ onMounted(() => {
                       : 'text-gray-900 border-gray-100'
                   "
                 >
-                  <th class="pb-4 pl-2 text-center font-black w-[18%]">
-                    商品名称
-                  </th>
+                  <th class="pb-4 pl-2 text-center font-black w-[18%]">商品名称</th>
                   <th class="pb-4 text-center font-black w-[10%]">类型</th>
                   <th class="pb-4 text-center font-black w-[10%]">订单数量</th>
                   <th class="pb-4 text-center font-black w-[10%]">状态</th>
@@ -1076,7 +927,6 @@ onMounted(() => {
             </table>
           </div>
 
-          <!-- 动态变色的分页器 -->
           <div
             v-if="shouldShowPagination"
             class="mt-8 mb-4 flex items-center justify-center gap-2"
@@ -1167,19 +1017,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* 全局平滑过渡 */
 .orders-page * {
   transition-property: background-color, border-color, color, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
 
-/* 搜索框图标 focus 联动 */
 .group-search-focus-within\:text-\[\#5b4eff\]:focus-within {
   color: #5b4eff;
 }
 
-/* 表格滚动条美化 */
 .overflow-x-auto::-webkit-scrollbar {
   height: 6px;
 }
