@@ -15,6 +15,7 @@ definePageMeta({
 });
 
 const isDark = useState("admin-dark-mode", () => false);
+const ordersPageRef = ref<HTMLElement | null>(null);
 
 function toggleTheme() {
   isDark.value = !isDark.value;
@@ -476,22 +477,30 @@ function handleDocumentClick(e: MouseEvent) {
 
 onMounted(() => {
   nextTick(() => {
-    gsap.from(".stagger-card", {
-      y: 30,
-      opacity: 0,
-      duration: 0.6,
-      stagger: 0.08,
-      ease: "power3.out",
-    });
+    const cards = ordersPageRef.value?.querySelectorAll(".stagger-card");
+    if (cards?.length) {
+      gsap.killTweensOf(cards);
+      gsap.from(cards, {
+        y: 30,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: "power3.out",
+      });
+    }
 
-    gsap.from(".table-row", {
-      x: -15,
-      opacity: 0,
-      duration: 0.5,
-      stagger: 0.05,
-      delay: 0.3,
-      ease: "power2.out",
-    });
+    const rows = ordersPageRef.value?.querySelectorAll(".table-row");
+    if (rows?.length) {
+      gsap.killTweensOf(rows);
+      gsap.from(rows, {
+        x: -15,
+        opacity: 0,
+        duration: 0.5,
+        stagger: 0.05,
+        delay: 0.3,
+        ease: "power2.out",
+      });
+    }
   });
 
   document.addEventListener("click", handleDocumentClick);
@@ -499,11 +508,25 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleDocumentClick);
+  viewingOrder.value = null;
+  deletingOrderId.value = null;
+  isStatusDropdownOpen.value = false;
+  isFilterDropdownOpen.value = false;
+
+  const animatedEls = ordersPageRef.value?.querySelectorAll(
+    ".stagger-card, .table-row",
+  );
+  if (animatedEls?.length) {
+    gsap.killTweensOf(animatedEls);
+    gsap.set(animatedEls, { clearProps: "opacity,transform" });
+  }
 });
 </script>
 
 <template>
+  <div class="contents">
   <div
+    ref="ordersPageRef"
     class="orders-page min-h-full px-8 py-8 pb-0 flex flex-col transition-colors duration-500"
     :class="
       isDark
@@ -1303,6 +1326,7 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
   </Teleport>
+  </div>
 </template>
 
 <style scoped>

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useRoute } from "vue-router";
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 
@@ -7,17 +7,36 @@ const supabase = useSupabaseClient();
 const isDark = useState("admin-dark-mode", () => false);
 const isEasterEggActive = ref(false);
 const isPageLoading = ref(false);
+let pageLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 
 const nuxtApp = useNuxtApp();
-nuxtApp.hook("page:start", () => { isPageLoading.value = true; });
-nuxtApp.hook("page:finish", () => { isPageLoading.value = false; });
 
-// 判断是否是登录页
+function stopPageLoading() {
+  isPageLoading.value = false;
+  if (pageLoadingTimer) {
+    clearTimeout(pageLoadingTimer);
+    pageLoadingTimer = null;
+  }
+}
+
+function startPageLoading() {
+  isPageLoading.value = true;
+  if (pageLoadingTimer) {
+    clearTimeout(pageLoadingTimer);
+  }
+  pageLoadingTimer = setTimeout(stopPageLoading, 5000);
+}
+
+nuxtApp.hook("page:start", startPageLoading);
+nuxtApp.hook("page:finish", stopPageLoading);
+nuxtApp.hook("app:error", stopPageLoading);
+
+// 鍒ゆ柇鏄惁鏄櫥褰曢〉
 const isLoginPage = computed(() => {
   return route.path === "/admin";
 });
 
-// --- 粒子与流星的类型定义 ---
+// --- 绮掑瓙涓庢祦鏄熺殑绫诲瀷瀹氫箟 ---
 interface Star {
   distance: number;
   angle: number;
@@ -40,7 +59,7 @@ interface Meteor {
   maxLife: number;
 }
 
-// --- Konami Code 彩蛋逻辑 ---
+// --- Konami Code 褰╄泲閫昏緫 ---
 const konamiCode = [
   "ArrowUp",
   "ArrowUp",
@@ -56,12 +75,12 @@ const konamiCode = [
 let keySequence: string[] = [];
 
 const checkKonamiCode = (e: KeyboardEvent) => {
-  // 登录页不触发彩蛋
+  // 鐧诲綍椤典笉瑙﹀彂褰╄泲
   if (isLoginPage.value) {
     return;
   }
 
-  // 彩蛋激活时，只有按 ESC 才取消
+  // 褰╄泲婵€娲绘椂锛屽彧鏈夋寜 ESC 鎵嶅彇娑?
   if (isEasterEggActive.value) {
     if (e.code === "Escape") {
       isEasterEggActive.value = false;
@@ -87,7 +106,7 @@ const handleLogout = async () => {
   await navigateTo("/admin");
 };
 
-// --- Canvas 星空引擎 ---
+// --- Canvas 鏄熺┖寮曟搸 ---
 const starCanvas = ref<HTMLCanvasElement | null>(null);
 let cleanupCanvas: (() => void) | null = null;
 
@@ -137,7 +156,7 @@ const initParticleSystem = (): (() => void) | null => {
     meteors.push({
       x: Math.random() * width * 1.5,
       y: -50,
-      vx: -baseSpeed * 1.0, // 锁定平行角度
+      vx: -baseSpeed * 1.0, // 閿佸畾骞宠瑙掑害
       vy: baseSpeed * 1.5,
       length: Math.random() * 400 + 350,
       thickness: Math.random() * 1.2 + 1.2,
@@ -150,10 +169,10 @@ const initParticleSystem = (): (() => void) | null => {
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
 
-    // 1. 绘制底层星空
+    // 1. 缁樺埗搴曞眰鏄熺┖
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
-      // 修复 TS 严苛检查：确保 p 存在
+      // 淇 TS 涓ヨ嫑妫€鏌ワ細纭繚 p 瀛樺湪
       if (!p) continue;
 
       p.phase += p.twinkleSpeed;
@@ -173,7 +192,7 @@ const initParticleSystem = (): (() => void) | null => {
       }
     }
 
-    // 2. 流星调度
+    // 2. 娴佹槦璋冨害
     const now = Date.now();
     if (now > nextMeteorTime) {
       const count = Math.random() < 0.15 ? 2 : 1;
@@ -181,10 +200,10 @@ const initParticleSystem = (): (() => void) | null => {
       nextMeteorTime = now + (Math.random() * 5000 + 1000);
     }
 
-    // 3. 绘制流星
+    // 3. 缁樺埗娴佹槦
     for (let i = meteors.length - 1; i >= 0; i--) {
       const m = meteors[i];
-      // 修复 TS 严苛检查：确保 m 存在
+      // 淇 TS 涓ヨ嫑妫€鏌ワ細纭繚 m 瀛樺湪
       if (!m) continue;
 
       m.x += m.vx;
@@ -207,7 +226,7 @@ const initParticleSystem = (): (() => void) | null => {
       const tailX = m.x - (m.vx / speedScale) * m.length;
       const tailY = m.y - (m.vy / speedScale) * m.length;
 
-      // 绘制锐利渐变尾巴
+      // 缁樺埗閿愬埄娓愬彉灏惧反
       const gradient = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
       gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.7})`);
       gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
@@ -220,7 +239,7 @@ const initParticleSystem = (): (() => void) | null => {
       ctx.lineCap = "round";
       ctx.stroke();
 
-      // 绘制发光头部
+      // 缁樺埗鍙戝厜澶撮儴
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.thickness * 1.5, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
@@ -247,27 +266,28 @@ const initParticleSystem = (): (() => void) | null => {
   };
 };
 
-// --- 生命周期管理 ---
+// --- 鐢熷懡鍛ㄦ湡绠＄悊 ---
 let mediaQuery: MediaQueryList | null = null;
 const handleSystemThemeChange = (e: MediaQueryListEvent) => {
   isDark.value = e.matches;
 };
 
 onMounted(() => {
-  // 隐藏 admin 页面的浏览器滚动条
+  // 闅愯棌 admin 椤甸潰鐨勬祻瑙堝櫒婊氬姩鏉?
   document.documentElement.classList.add("hide-body-scrollbar");
 
   window.addEventListener("keydown", checkKonamiCode);
 
   if (window.matchMedia) {
     mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    // 仅在首次挂载且没有手动设置过时参考系统主题
+    // 浠呭湪棣栨鎸傝浇涓旀病鏈夋墜鍔ㄨ缃繃鏃跺弬鑰冪郴缁熶富棰?
     if (mediaQuery.matches) isDark.value = true;
     mediaQuery.addEventListener("change", handleSystemThemeChange);
   }
 });
 
 onUnmounted(() => {
+  stopPageLoading();
   document.documentElement.classList.remove("hide-body-scrollbar");
 
   window.removeEventListener("keydown", checkKonamiCode);
@@ -318,7 +338,7 @@ const navItems = [
     class="relative flex min-h-screen w-full transition-colors duration-500"
     :class="isDark ? 'bg-[#000000]' : 'bg-[#f8f9fa]'"
   >
-    <!-- 背景层 -->
+    <!-- 鑳屾櫙灞?-->
     <div
       v-if="isDark"
       class="fixed inset-0 overflow-hidden pointer-events-none z-0"
@@ -330,7 +350,7 @@ const navItems = [
       ></div>
     </div>
 
-    <!-- 彩蛋提示层 -->
+    <!-- 褰╄泲鎻愮ず灞?-->
     <div
       v-if="isEasterEggActive"
       class="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
@@ -339,18 +359,18 @@ const navItems = [
         <h2
           class="text-4xl font-black tracking-tighter text-white drop-shadow-lg animate-pulse"
         >
-          ✨
+          鉁?
         </h2>
         <p
           class="mt-6 text-gray-300 text-lg cursor-pointer pointer-events-auto hover:text-white transition-colors"
           @click="handleEasterEggClose"
         >
-          按 ESC 键或点击这里返回
+          鎸?ESC 閿垨鐐瑰嚮杩欓噷杩斿洖
         </p>
       </div>
     </div>
 
-    <!-- 侧边栏 -->
+    <!-- 渚ц竟鏍?-->
     <aside
       v-if="!isLoginPage && !isEasterEggActive"
       class="sticky top-0 z-10 flex h-screen w-[84px] shrink-0 flex-col items-center border-r py-10 transition-colors duration-500"
@@ -421,9 +441,7 @@ const navItems = [
       v-show="!isEasterEggActive"
       class="relative z-10 flex-1 min-w-0 transition-colors duration-500"
     >
-      <div v-show="!isPageLoading">
-        <slot />
-      </div>
+      <slot />
 
       <Transition
         enter-active-class="transition duration-200 ease-out"
@@ -435,8 +453,9 @@ const navItems = [
       >
         <div
           v-if="isPageLoading"
-          class="flex flex-col items-center justify-center gap-4"
-          style="height: 100vh"
+          class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4"
+          :class="isDark ? 'bg-[#000000]/80' : 'bg-[#f8f9fa]/80'"
+          style="backdrop-filter: blur(4px)"
         >
           <svg
             class="h-9 w-9 animate-spin"
@@ -445,8 +464,19 @@ const navItems = [
             fill="none"
             viewBox="0 0 24 24"
           >
-            <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
-            <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            <circle
+              class="opacity-20"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="3"
+            />
+            <path
+              class="opacity-90"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
           </svg>
           <p
             class="text-[13px] font-black tracking-widest"
@@ -468,7 +498,7 @@ button {
 </style>
 
 <style>
-/* 隐藏 admin 页面的浏览器滚动条 */
+/* 闅愯棌 admin 椤甸潰鐨勬祻瑙堝櫒婊氬姩鏉?*/
 .hide-body-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */

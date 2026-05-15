@@ -39,9 +39,153 @@ definePageMeta({
 
 const isDark = useState("admin-dark-mode", () => false);
 const searchQuery = ref("");
+const productsPageRef = ref<HTMLElement | null>(null);
+const isConfirmDialogOpen = ref(false);
+const confirmTarget = ref<MerchandiseProduct | null>(null);
+const isDeletingProduct = ref(false);
+const deleteError = ref("");
+
 const isEditModalOpen = ref(false);
 const isSavingProduct = ref(false);
 const editError = ref("");
+
+const editFileInputRef = ref<HTMLInputElement | null>(null);
+const editPreviewImgRef = ref<HTMLElement | null>(null);
+const editProgressBarRef = ref<HTMLElement | null>(null);
+const editProgressWrapRef = ref<HTMLElement | null>(null);
+const editPreviewUrl = ref("");
+const editUploadState = ref<"idle" | "uploading" | "done" | "error">("idle");
+const editUploadErrorMsg = ref("");
+const editShowManualUrl = ref(false);
+const editIsDraggingOver = ref(false);
+
+const isCreateModalOpen = ref(false);
+const isCreatingProduct = ref(false);
+const createError = ref("");
+const isCategoryDropdownOpen = ref(false);
+
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const previewImgRef = ref<HTMLElement | null>(null);
+const progressBarRef = ref<HTMLElement | null>(null);
+const progressWrapRef = ref<HTMLElement | null>(null);
+const previewUrl = ref("");
+const uploadState = ref<"idle" | "uploading" | "done" | "error">("idle");
+const uploadErrorMsg = ref("");
+const showManualUrl = ref(false);
+const isDraggingOver = ref(false);
+const createForm = ref({
+  id: "",
+  name: "",
+  selectedCategory: "",
+  isNewCategory: false,
+  newCategoryName: "",
+  priceDisplay: "",
+  imageDescription: "",
+  imageUrl: "",
+  stock: 100,
+  sortOrder: 0,
+});
+
+const {
+  data: dbCategories,
+  refresh: refreshCategories,
+} = await useFetch<{ id: string; name: string; order: number }[]>(
+  "/api/admin/categories",
+  { default: () => [] },
+);
+
+function onCategorySelect(value: string) {
+  if (value === "__new__") {
+    createForm.value.isNewCategory = true;
+    createForm.value.selectedCategory = "__new__";
+    createForm.value.newCategoryName = "";
+  } else {
+    createForm.value.isNewCategory = false;
+    createForm.value.selectedCategory = value;
+  }
+}
+
+function triggerFileInput() {
+  if (uploadState.value === "uploading") return;
+  fileInputRef.value?.click();
+}
+
+function handleFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) uploadFile(file);
+  (e.target as HTMLInputElement).value = "";
+}
+
+function handleDrop(e: DragEvent) {
+  isDraggingOver.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith("image/")) uploadFile(file);
+}
+
+async function uploadFile(file: File) {
+  uploadState.value = "uploading";
+  uploadErrorMsg.value = "";
+
+  if (previewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = URL.createObjectURL(file);
+
+  await nextTick();
+
+  if (previewImgRef.value) {
+    gsap.fromTo(
+      previewImgRef.value,
+      { scale: 0.88, opacity: 0, y: 10 },
+      { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.6)" },
+    );
+  }
+
+  if (progressWrapRef.value) {
+    gsap.to(progressWrapRef.value, { opacity: 1, duration: 0.2 });
+  }
+  if (progressBarRef.value) {
+    gsap.fromTo(
+      progressBarRef.value,
+      { width: "0%" },
+      { width: "82%", duration: 2.4, ease: "power2.out" },
+    );
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const result = await $fetch<{ url: string }>("/api/admin/upload/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    createForm.value.imageUrl = result.url;
+
+    if (progressBarRef.value) {
+      gsap.killTweensOf(progressBarRef.value);
+      gsap.to(progressBarRef.value, {
+        width: "100%",
+        duration: 0.22,
+        ease: "power2.in",
+        onComplete: () => {
+          if (progressWrapRef.value) {
+            gsap.to(progressWrapRef.value, { opacity: 0, delay: 0.55, duration: 0.35 });
+          }
+        },
+      });
+    }
+
+    uploadState.value = "done";
+  } catch (err: any) {
+    uploadState.value = "error";
+    uploadErrorMsg.value = err?.statusMessage || err?.data?.statusMessage || "上传失败，请重试";
+    if (progressWrapRef.value) {
+      gsap.killTweensOf(progressWrapRef.value);
+      gsap.to(progressWrapRef.value, { opacity: 0, duration: 0.25 });
+    }
+  }
+}
+
 const editForm = ref<EditProductForm>({
   id: "",
   name: "",
@@ -180,8 +324,183 @@ function handleStatusChange(
   deleteProduct(selectedProduct);
 }
 
+function openCreateModal() {
+  createError.value = "";
+  if (previewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = "";
+  uploadState.value = "idle";
+  uploadErrorMsg.value = "";
+  showManualUrl.value = false;
+  isDraggingOver.value = false;
+  createForm.value = {
+    id: "",
+    name: "",
+    selectedCategory: dbCategories.value[0]?.name ?? "",
+    isNewCategory: false,
+    newCategoryName: "",
+    priceDisplay: "",
+    imageDescription: "",
+    imageUrl: "",
+    stock: 100,
+    sortOrder: 0,
+  };
+  isCreateModalOpen.value = true;
+}
+
+function closeCreateModal() {
+  isCreateModalOpen.value = false;
+  createError.value = "";
+  if (previewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = "";
+  uploadState.value = "idle";
+  uploadErrorMsg.value = "";
+  showManualUrl.value = false;
+}
+
+async function saveNewProduct() {
+  if (isCreatingProduct.value) return;
+  createError.value = "";
+
+  if (!createForm.value.imageUrl) {
+    createError.value = "请上传商品图片或手动输入图片地址";
+    return;
+  }
+
+  isCreatingProduct.value = true;
+
+  try {
+    let category = createForm.value.selectedCategory;
+
+    if (createForm.value.isNewCategory) {
+      const newName = createForm.value.newCategoryName.trim();
+      if (!newName) {
+        createError.value = "请输入新分类的名称";
+        return;
+      }
+      const created = await $fetch<{ id: string; name: string }>("/api/admin/categories", {
+        method: "POST",
+        body: { name: newName },
+      });
+      await refreshCategories();
+      category = created.name;
+    }
+
+    const productId = createForm.value.id.trim() || crypto.randomUUID();
+
+    await $fetch("/api/admin/products", {
+      method: "POST",
+      body: {
+        id: productId,
+        name: createForm.value.name,
+        category,
+        priceDisplay: createForm.value.priceDisplay,
+        imageDescription: createForm.value.imageDescription,
+        imageUrl: createForm.value.imageUrl,
+        stock: createForm.value.stock,
+        sortOrder: createForm.value.sortOrder,
+      },
+    });
+
+    await refreshProducts();
+    closeCreateModal();
+    animateProducts();
+  } catch (error: any) {
+    createError.value =
+      error?.statusMessage || error?.data?.statusMessage || "商品创建失败";
+  } finally {
+    isCreatingProduct.value = false;
+  }
+}
+
+function triggerEditFileInput() {
+  if (editUploadState.value === "uploading") return;
+  editFileInputRef.value?.click();
+}
+
+function handleEditFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) uploadEditFile(file);
+  (e.target as HTMLInputElement).value = "";
+}
+
+function handleEditDrop(e: DragEvent) {
+  editIsDraggingOver.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith("image/")) uploadEditFile(file);
+}
+
+async function uploadEditFile(file: File) {
+  editUploadState.value = "uploading";
+  editUploadErrorMsg.value = "";
+
+  if (editPreviewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(editPreviewUrl.value);
+  editPreviewUrl.value = URL.createObjectURL(file);
+
+  await nextTick();
+
+  if (editPreviewImgRef.value) {
+    gsap.fromTo(
+      editPreviewImgRef.value,
+      { scale: 0.88, opacity: 0, y: 10 },
+      { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.6)" },
+    );
+  }
+
+  if (editProgressWrapRef.value) {
+    gsap.to(editProgressWrapRef.value, { opacity: 1, duration: 0.2 });
+  }
+  if (editProgressBarRef.value) {
+    gsap.fromTo(
+      editProgressBarRef.value,
+      { width: "0%" },
+      { width: "82%", duration: 2.4, ease: "power2.out" },
+    );
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const result = await $fetch<{ url: string }>("/api/admin/upload/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    editForm.value.imageUrl = result.url;
+
+    if (editProgressBarRef.value) {
+      gsap.killTweensOf(editProgressBarRef.value);
+      gsap.to(editProgressBarRef.value, {
+        width: "100%",
+        duration: 0.22,
+        ease: "power2.in",
+        onComplete: () => {
+          if (editProgressWrapRef.value) {
+            gsap.to(editProgressWrapRef.value, { opacity: 0, delay: 0.55, duration: 0.35 });
+          }
+        },
+      });
+    }
+
+    editUploadState.value = "done";
+  } catch (err: any) {
+    editUploadState.value = "error";
+    editUploadErrorMsg.value = err?.statusMessage || err?.data?.statusMessage || "上传失败，请重试";
+    if (editProgressWrapRef.value) {
+      gsap.killTweensOf(editProgressWrapRef.value);
+      gsap.to(editProgressWrapRef.value, { opacity: 0, duration: 0.25 });
+    }
+  }
+}
+
 function openEditModal(product: MerchandiseProduct) {
   editError.value = "";
+  if (editPreviewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(editPreviewUrl.value);
+  editPreviewUrl.value = product.imageUrl;
+  editUploadState.value = "idle";
+  editUploadErrorMsg.value = "";
+  editShowManualUrl.value = false;
+  editIsDraggingOver.value = false;
   editForm.value = {
     id: product.id,
     name: product.name,
@@ -195,29 +514,45 @@ function openEditModal(product: MerchandiseProduct) {
   isEditModalOpen.value = true;
 }
 
-async function deleteProduct(product: MerchandiseProduct) {
-  const isConfirmed = window.confirm(`确定要下架并删除「${product.name}」吗？`);
-  if (!isConfirmed) {
-    return;
-  }
+function deleteProduct(product: MerchandiseProduct) {
+  deleteError.value = "";
+  confirmTarget.value = product;
+  isConfirmDialogOpen.value = true;
+}
+
+function closeDeleteConfirm() {
+  isConfirmDialogOpen.value = false;
+  confirmTarget.value = null;
+  deleteError.value = "";
+}
+
+async function confirmDeleteProduct() {
+  if (!confirmTarget.value || isDeletingProduct.value) return;
+  isDeletingProduct.value = true;
+  deleteError.value = "";
 
   try {
-    await $fetch(`/api/admin/products/${encodeURIComponent(product.id)}`, {
+    await $fetch(`/api/admin/products/${encodeURIComponent(confirmTarget.value.id)}`, {
       method: "DELETE",
     });
-
+    closeDeleteConfirm();
     await refreshProducts();
     animateProducts();
   } catch (error: any) {
-    window.alert(
-      error?.statusMessage || error?.data?.statusMessage || "商品删除失败",
-    );
+    deleteError.value = error?.statusMessage || error?.data?.statusMessage || "商品删除失败";
+  } finally {
+    isDeletingProduct.value = false;
   }
 }
 
 function closeEditModal() {
   isEditModalOpen.value = false;
   editError.value = "";
+  if (editPreviewUrl.value?.startsWith("blob:")) URL.revokeObjectURL(editPreviewUrl.value);
+  editPreviewUrl.value = "";
+  editUploadState.value = "idle";
+  editUploadErrorMsg.value = "";
+  editShowManualUrl.value = false;
 }
 
 async function saveProductEdit() {
@@ -258,8 +593,12 @@ async function saveProductEdit() {
 
 function animateProducts() {
   nextTick(() => {
+    const els = productsPageRef.value?.querySelectorAll(".stagger-product");
+    if (!els.length) return;
+
+    gsap.killTweensOf(els);
     gsap.fromTo(
-      ".stagger-product",
+      els,
       { y: 30, opacity: 0 },
       {
         y: 0,
@@ -278,15 +617,24 @@ function handleDocumentClick(e: MouseEvent) {
   if (!target.closest(".filter-dropdown")) {
     isFilterOpen.value = false;
   }
+  if (!target.closest(".create-category-dropdown")) {
+    isCategoryDropdownOpen.value = false;
+  }
 }
 
 onMounted(() => {
-  gsap.from(".stagger-card", {
-    y: 30,
-    opacity: 0,
-    duration: 0.6,
-    stagger: 0.08,
-    ease: "power3.out",
+  nextTick(() => {
+    const cards = productsPageRef.value?.querySelectorAll(".stagger-card");
+    if (cards?.length) {
+      gsap.killTweensOf(cards);
+      gsap.from(cards, {
+        y: 30,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: "power3.out",
+      });
+    }
   });
   animateProducts();
 
@@ -295,6 +643,13 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleDocumentClick);
+  const animatedEls = productsPageRef.value?.querySelectorAll(
+    ".stagger-product, .stagger-card",
+  );
+  if (animatedEls?.length) {
+    gsap.killTweensOf(animatedEls);
+    gsap.set(animatedEls, { clearProps: "opacity,transform" });
+  }
 });
 
 watch(filteredProducts, () => {
@@ -304,6 +659,7 @@ watch(filteredProducts, () => {
 
 <template>
   <div
+    ref="productsPageRef"
     class="products-page min-h-full p-8 transition-colors duration-500"
     :class="
       isDark
@@ -570,6 +926,23 @@ watch(filteredProducts, () => {
             </svg>
           </button>
 
+          <button
+            class="flex items-center gap-2 rounded-full bg-[#5b4eff] px-6 py-3.5 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(91,78,255,0.25)] transition-all hover:bg-[#4d42db] active:scale-95"
+            @click="openCreateModal"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2.5"
+              stroke="currentColor"
+              class="h-4 w-4"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            新增商品
+          </button>
+
           <p
             class="ml-auto text-[13px] font-bold"
             :class="isDark ? 'text-gray-400' : 'text-gray-500'"
@@ -814,15 +1187,149 @@ watch(filteredProducts, () => {
               </label>
             </div>
 
-            <label class="md:col-span-2 flex flex-col gap-2 text-sm font-black">
-              图片地址
-              <input
-                v-model="editForm.imageUrl"
-                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
-                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
-                required
+            <div class="md:col-span-2 flex flex-col gap-3 text-sm font-black">
+              图片
+
+              <!-- 上传区域 -->
+              <div
+                class="relative overflow-hidden rounded-2xl ring-1 transition-all duration-200 min-h-[160px] flex items-center justify-center"
+                :class="[
+                  editUploadState === 'uploading' ? 'cursor-wait' : 'cursor-pointer',
+                  editIsDraggingOver
+                    ? 'ring-2 ring-[#5b4eff] scale-[1.01]'
+                    : editUploadState === 'error'
+                      ? isDark ? 'ring-red-500/30 bg-[#1a1d27]' : 'ring-red-300 bg-red-50/30'
+                      : isDark
+                        ? 'ring-white/10 bg-[#1a1d27] hover:ring-[#5b4eff]/40'
+                        : 'ring-gray-200 bg-gray-50 hover:ring-[#5b4eff]/50',
+                ]"
+                @click="triggerEditFileInput"
+                @dragover.prevent="editIsDraggingOver = true"
+                @dragleave.prevent="editIsDraggingOver = false"
+                @drop.prevent="handleEditDrop"
               >
-            </label>
+                <!-- 预览图（现有图或新上传） -->
+                <img
+                  v-if="editPreviewUrl"
+                  ref="editPreviewImgRef"
+                  :src="editPreviewUrl"
+                  class="w-full object-contain max-h-[200px] p-3"
+                  alt="预览"
+                />
+
+                <!-- 上传中蒙层 -->
+                <div
+                  v-if="editUploadState === 'uploading'"
+                  class="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[3px]"
+                >
+                  <svg class="h-7 w-7 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
+
+                <!-- 空状态占位 -->
+                <div v-if="!editPreviewUrl" class="flex flex-col items-center gap-3 py-8 select-none">
+                  <div
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl transition-colors"
+                    :class="editIsDraggingOver ? 'bg-[#5b4eff]/20' : 'bg-[#5b4eff]/10'"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-6 w-6 text-[#5b4eff]">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </div>
+                  <div class="text-center">
+                    <p class="font-black" :class="isDark ? 'text-gray-200' : 'text-gray-700'">
+                      {{ editIsDraggingOver ? '松开鼠标上传' : '点击或拖拽图片到此处' }}
+                    </p>
+                    <p class="mt-1 text-[12px] font-bold" :class="isDark ? 'text-gray-500' : 'text-gray-400'">
+                      支持 JPG · PNG · WebP · GIF · AVIF
+                    </p>
+                  </div>
+                </div>
+
+                <!-- 替换图片蒙层 -->
+                <div
+                  v-if="editPreviewUrl && editUploadState !== 'uploading'"
+                  class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/30"
+                >
+                  <span class="rounded-xl bg-white/15 px-4 py-2 text-[13px] font-black text-white backdrop-blur-sm">
+                    {{ editUploadState === 'done' ? '重新上传' : '替换图片' }}
+                  </span>
+                </div>
+
+                <input ref="editFileInputRef" type="file" class="hidden" accept="image/*" @change="handleEditFileChange" />
+              </div>
+
+              <!-- 进度条 -->
+              <div
+                ref="editProgressWrapRef"
+                class="h-1.5 overflow-hidden rounded-full"
+                :class="isDark ? 'bg-white/10' : 'bg-gray-100'"
+                style="opacity: 0"
+              >
+                <div
+                  ref="editProgressBarRef"
+                  class="h-full rounded-full bg-gradient-to-r from-[#5b4eff] to-[#7c6fff]"
+                  style="width: 0%"
+                />
+              </div>
+
+              <!-- 状态文字 -->
+              <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="-translate-y-1 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <p v-if="editUploadState === 'done'" class="flex items-center gap-1.5 text-[12px] font-bold text-emerald-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 flex-shrink-0">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                  </svg>
+                  新图片上传成功，保存后生效
+                </p>
+                <p v-else-if="editUploadState === 'error'" class="text-[12px] font-bold text-red-500">
+                  ✕ {{ editUploadErrorMsg }}
+                </p>
+              </Transition>
+
+              <!-- 手动输入折叠区 -->
+              <div class="flex flex-col gap-2">
+                <button
+                  type="button"
+                  class="flex items-center gap-1 text-[12px] font-bold transition-colors w-fit"
+                  :class="isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'"
+                  @click="editShowManualUrl = !editShowManualUrl"
+                >
+                  <svg
+                    class="h-3 w-3 transition-transform duration-200"
+                    :class="editShowManualUrl ? 'rotate-90' : ''"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                  或手动输入图片地址
+                </button>
+                <Transition
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="-translate-y-1 opacity-0"
+                  enter-to-class="translate-y-0 opacity-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="opacity-100"
+                  leave-to-class="opacity-0"
+                >
+                  <input
+                    v-if="editShowManualUrl"
+                    v-model="editForm.imageUrl"
+                    class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                    :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                    placeholder="https://..."
+                  >
+                </Transition>
+              </div>
+            </div>
 
             <label class="md:col-span-2 flex flex-col gap-2 text-sm font-black">
               图片描述
@@ -857,6 +1364,485 @@ watch(filteredProducts, () => {
             </button>
           </div>
         </form>
+      </div>
+    </Transition>
+
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isCreateModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-5 py-8 backdrop-blur-sm"
+        @click.self="closeCreateModal"
+      >
+        <form
+          class="w-full max-w-[760px] overflow-hidden rounded-[28px] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.22)] ring-1"
+          :class="
+            isDark
+              ? 'bg-[#11131c] text-gray-100 ring-white/10'
+              : 'bg-white text-gray-900 ring-gray-100'
+          "
+          @submit.prevent="saveNewProduct"
+        >
+          <div class="flex items-start justify-between gap-5">
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.18em] text-[#5b4eff]">
+                New Product
+              </p>
+              <h2 class="mt-2 text-2xl font-black">新增商品</h2>
+            </div>
+            <button
+              type="button"
+              class="flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+              :class="
+                isDark
+                  ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              "
+              @click="closeCreateModal"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="mt-6 grid gap-4 md:grid-cols-2">
+            <label class="flex flex-col gap-2 text-sm font-black">
+              <span class="flex items-center gap-2">
+                商品 ID
+                <span
+                  class="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                  :class="isDark ? 'bg-white/10 text-gray-400' : 'bg-gray-100 text-gray-500'"
+                >
+                  选填，留空自动生成
+                </span>
+              </span>
+              <input
+                v-model="createForm.id"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                placeholder="留空则自动生成 UUID"
+              >
+            </label>
+
+            <label class="flex flex-col gap-2 text-sm font-black">
+              商品名称
+              <input
+                v-model="createForm.name"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                required
+              >
+            </label>
+
+            <div class="flex flex-col gap-2 text-sm font-black">
+              分类
+              <div class="relative create-category-dropdown">
+                <button
+                  type="button"
+                  class="w-full flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold outline-none ring-1 transition-all"
+                  :class="[
+                    isCategoryDropdownOpen ? 'ring-2 ring-[#5b4eff]' : '',
+                    isDark ? 'bg-[#1a1d27] ring-white/10 text-gray-100' : 'bg-gray-50 ring-gray-200 text-gray-900',
+                  ]"
+                  @click.stop="isCategoryDropdownOpen = !isCategoryDropdownOpen"
+                >
+                  <span class="flex items-center gap-2.5">
+                    <span
+                      class="h-2 w-2 rotate-45 rounded-[2px] flex-shrink-0"
+                      :class="createForm.isNewCategory ? 'bg-[#5b4eff]/50' : 'bg-[#5b4eff]'"
+                    />
+                    <span :class="isDark ? 'text-gray-100' : 'text-gray-800'">
+                      {{ createForm.isNewCategory ? '＋ 新增分类' : (createForm.selectedCategory || '请选择分类') }}
+                    </span>
+                  </span>
+                  <svg
+                    class="h-4 w-4 flex-shrink-0 transition-transform duration-200"
+                    :class="[
+                      isCategoryDropdownOpen ? 'rotate-180' : '',
+                      isDark ? 'text-gray-400' : 'text-gray-400',
+                    ]"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2.5"
+                    stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+
+                <Transition
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="-translate-y-2 opacity-0"
+                  enter-to-class="translate-y-0 opacity-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="translate-y-0 opacity-100"
+                  leave-to-class="-translate-y-2 opacity-0"
+                >
+                  <div
+                    v-if="isCategoryDropdownOpen"
+                    class="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl shadow-xl ring-1"
+                    :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-white ring-gray-100'"
+                  >
+                    <button
+                      v-for="cat in dbCategories"
+                      :key="cat.id"
+                      type="button"
+                      class="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] font-bold transition-colors"
+                      :class="
+                        createForm.selectedCategory === cat.name && !createForm.isNewCategory
+                          ? 'bg-[#5b4eff]/10 text-[#5b4eff]'
+                          : isDark
+                            ? 'text-gray-300 hover:bg-white/5'
+                            : 'text-gray-700 hover:bg-gray-50'
+                      "
+                      @click.stop="onCategorySelect(cat.name); isCategoryDropdownOpen = false"
+                    >
+                      <span
+                        class="h-2 w-2 rotate-45 rounded-[2px] flex-shrink-0 transition-colors"
+                        :class="
+                          createForm.selectedCategory === cat.name && !createForm.isNewCategory
+                            ? 'bg-[#5b4eff]'
+                            : isDark ? 'bg-gray-600' : 'bg-gray-300'
+                        "
+                      />
+                      {{ cat.name }}
+                      <span
+                        v-if="createForm.selectedCategory === cat.name && !createForm.isNewCategory"
+                        class="ml-auto text-[11px] font-black text-[#5b4eff]"
+                      >✓</span>
+                    </button>
+
+                    <div
+                      class="mx-4 border-t"
+                      :class="isDark ? 'border-white/10' : 'border-gray-100'"
+                    />
+
+                    <button
+                      type="button"
+                      class="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] font-bold transition-colors"
+                      :class="
+                        createForm.isNewCategory
+                          ? 'bg-[#5b4eff]/10 text-[#5b4eff]'
+                          : isDark
+                            ? 'text-[#5b4eff] hover:bg-[#5b4eff]/10'
+                            : 'text-[#5b4eff] hover:bg-[#5b4eff]/5'
+                      "
+                      @click.stop="onCategorySelect('__new__'); isCategoryDropdownOpen = false"
+                    >
+                      <span class="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#5b4eff]/15 text-[10px] font-black text-[#5b4eff]">＋</span>
+                      新增分类
+                      <span
+                        v-if="createForm.isNewCategory"
+                        class="ml-auto text-[11px] font-black text-[#5b4eff]"
+                      >✓</span>
+                    </button>
+                  </div>
+                </Transition>
+              </div>
+
+              <input
+                v-if="createForm.isNewCategory"
+                v-model="createForm.newCategoryName"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                placeholder="输入新分类名称，将同步写入数据库"
+                required
+              >
+            </div>
+
+            <label class="flex flex-col gap-2 text-sm font-black">
+              价格显示
+              <input
+                v-model="createForm.priceDisplay"
+                class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                placeholder="如 ¥99.00"
+                required
+              >
+            </label>
+
+            <div class="grid grid-cols-2 gap-4">
+              <label class="flex flex-col gap-2 text-sm font-black">
+                库存
+                <input
+                  v-model.number="createForm.stock"
+                  min="0"
+                  type="number"
+                  class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                  :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                >
+              </label>
+
+              <label class="flex flex-col gap-2 text-sm font-black">
+                排序值
+                <input
+                  v-model.number="createForm.sortOrder"
+                  min="0"
+                  type="number"
+                  class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                  :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                >
+              </label>
+            </div>
+
+            <div class="md:col-span-2 flex flex-col gap-3 text-sm font-black">
+              图片
+
+              <!-- 上传区域 -->
+              <div
+                class="relative overflow-hidden rounded-2xl ring-1 transition-all duration-200 min-h-[160px] flex items-center justify-center"
+                :class="[
+                  uploadState === 'uploading' ? 'cursor-wait' : 'cursor-pointer',
+                  isDraggingOver
+                    ? 'ring-2 ring-[#5b4eff] scale-[1.01]'
+                    : uploadState === 'error'
+                      ? isDark ? 'ring-red-500/30 bg-[#1a1d27]' : 'ring-red-300 bg-red-50/30'
+                      : isDark
+                        ? 'ring-white/10 bg-[#1a1d27] hover:ring-[#5b4eff]/40'
+                        : 'ring-gray-200 bg-gray-50 hover:ring-[#5b4eff]/50',
+                ]"
+                @click="triggerFileInput"
+                @dragover.prevent="isDraggingOver = true"
+                @dragleave.prevent="isDraggingOver = false"
+                @drop.prevent="handleDrop"
+              >
+                <!-- 预览图 -->
+                <img
+                  v-if="previewUrl"
+                  ref="previewImgRef"
+                  :src="previewUrl"
+                  class="w-full object-contain max-h-[200px] p-3"
+                  alt="预览"
+                />
+
+                <!-- 上传中蒙层 -->
+                <div
+                  v-if="uploadState === 'uploading'"
+                  class="absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[3px]"
+                >
+                  <svg class="h-7 w-7 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                </div>
+
+                <!-- 空状态占位 -->
+                <div v-if="!previewUrl" class="flex flex-col items-center gap-3 py-8 select-none">
+                  <div
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl transition-colors"
+                    :class="isDraggingOver ? 'bg-[#5b4eff]/20' : 'bg-[#5b4eff]/10'"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-6 w-6 text-[#5b4eff]">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                  </div>
+                  <div class="text-center">
+                    <p class="font-black" :class="isDark ? 'text-gray-200' : 'text-gray-700'">
+                      {{ isDraggingOver ? '松开鼠标上传' : '点击或拖拽图片到此处' }}
+                    </p>
+                    <p class="mt-1 text-[12px] font-bold" :class="isDark ? 'text-gray-500' : 'text-gray-400'">
+                      支持 JPG · PNG · WebP · GIF · AVIF
+                    </p>
+                  </div>
+                </div>
+
+                <!-- 重新选择蒙层（有预览且非上传中） -->
+                <div
+                  v-if="previewUrl && uploadState !== 'uploading'"
+                  class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200 bg-black/30"
+                >
+                  <span class="rounded-xl bg-white/15 px-4 py-2 text-[13px] font-black text-white backdrop-blur-sm">重新选择</span>
+                </div>
+
+                <input ref="fileInputRef" type="file" class="hidden" accept="image/*" @change="handleFileChange" />
+              </div>
+
+              <!-- 进度条 (GSAP 控制 opacity，初始透明) -->
+              <div
+                ref="progressWrapRef"
+                class="h-1.5 overflow-hidden rounded-full"
+                :class="isDark ? 'bg-white/10' : 'bg-gray-100'"
+                style="opacity: 0"
+              >
+                <div
+                  ref="progressBarRef"
+                  class="h-full rounded-full bg-gradient-to-r from-[#5b4eff] to-[#7c6fff]"
+                  style="width: 0%"
+                />
+              </div>
+
+              <!-- 状态文字 -->
+              <Transition
+                enter-active-class="transition duration-200 ease-out"
+                enter-from-class="-translate-y-1 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-150 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+              >
+                <p v-if="uploadState === 'done'" class="flex items-center gap-1.5 text-[12px] font-bold text-emerald-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 flex-shrink-0">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                  </svg>
+                  图片上传成功
+                </p>
+                <p v-else-if="uploadState === 'error'" class="text-[12px] font-bold text-red-500">
+                  ✕ {{ uploadErrorMsg }}
+                </p>
+              </Transition>
+
+              <!-- 手动输入折叠区 -->
+              <div class="flex flex-col gap-2">
+                <button
+                  type="button"
+                  class="flex items-center gap-1 text-[12px] font-bold transition-colors w-fit"
+                  :class="isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'"
+                  @click="showManualUrl = !showManualUrl"
+                >
+                  <svg
+                    class="h-3 w-3 transition-transform duration-200"
+                    :class="showManualUrl ? 'rotate-90' : ''"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                  或手动输入图片地址
+                </button>
+                <Transition
+                  enter-active-class="transition duration-200 ease-out"
+                  enter-from-class="-translate-y-1 opacity-0"
+                  enter-to-class="translate-y-0 opacity-100"
+                  leave-active-class="transition duration-150 ease-in"
+                  leave-from-class="opacity-100"
+                  leave-to-class="opacity-0"
+                >
+                  <input
+                    v-if="showManualUrl"
+                    v-model="createForm.imageUrl"
+                    class="rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                    :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+                    placeholder="https://..."
+                  >
+                </Transition>
+              </div>
+            </div>
+
+            <label class="md:col-span-2 flex flex-col gap-2 text-sm font-black">
+              图片描述
+              <textarea
+                v-model="createForm.imageDescription"
+                rows="3"
+                class="resize-none rounded-2xl border-0 px-4 py-3 text-sm font-bold outline-none ring-1 focus:ring-2 focus:ring-[#5b4eff]"
+                :class="isDark ? 'bg-[#1a1d27] ring-white/10' : 'bg-gray-50 ring-gray-200'"
+              />
+            </label>
+          </div>
+
+          <p v-if="createError" class="mt-4 rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-black text-red-500">
+            {{ createError }}
+          </p>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              class="rounded-2xl px-6 py-3 text-sm font-black transition-colors"
+              :class="isDark ? 'bg-white/5 text-gray-200 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              @click="closeCreateModal"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              class="rounded-2xl bg-[#5b4eff] px-7 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(91,78,255,0.28)] transition-all hover:bg-[#4d42db] disabled:cursor-not-allowed disabled:opacity-60"
+              :disabled="isCreatingProduct"
+            >
+              {{ isCreatingProduct ? "创建中..." : "创建商品" }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Transition>
+
+    <!-- 自定义下架确认弹窗 -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isConfirmDialogOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5 backdrop-blur-sm"
+        @click.self="closeDeleteConfirm"
+      >
+        <Transition
+          enter-active-class="transition duration-250 ease-out"
+          enter-from-class="scale-95 opacity-0"
+          enter-to-class="scale-100 opacity-100"
+          appear
+        >
+          <div
+            class="w-full max-w-[420px] rounded-[28px] p-6 shadow-[0_24px_80px_rgba(15,23,42,0.28)] ring-1"
+            :class="isDark ? 'bg-[#11131c] text-gray-100 ring-white/10' : 'bg-white text-gray-900 ring-gray-100'"
+          >
+            <!-- 图标 + 标题 -->
+            <div class="flex items-start gap-4">
+              <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-red-500/10">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 text-red-500">
+                  <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h3 class="text-[17px] font-black">确认下架商品</h3>
+                <p class="mt-1.5 text-[13px] font-bold leading-relaxed" :class="isDark ? 'text-gray-400' : 'text-gray-500'">
+                  即将下架并删除
+                  <span class="font-black" :class="isDark ? 'text-gray-100' : 'text-gray-900'">「{{ confirmTarget?.name }}」</span>，
+                  此操作不可撤销。
+                </p>
+              </div>
+            </div>
+
+            <!-- 错误提示 -->
+            <Transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="-translate-y-1 opacity-0"
+              enter-to-class="translate-y-0 opacity-100"
+            >
+              <p v-if="deleteError" class="mt-4 rounded-2xl bg-red-500/10 px-4 py-3 text-[13px] font-black text-red-500">
+                {{ deleteError }}
+              </p>
+            </Transition>
+
+            <!-- 操作按钮 -->
+            <div class="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                class="rounded-2xl px-6 py-2.5 text-[13px] font-black transition-colors"
+                :class="isDark ? 'bg-white/5 text-gray-200 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                :disabled="isDeletingProduct"
+                @click="closeDeleteConfirm"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                class="rounded-2xl bg-red-500 px-6 py-2.5 text-[13px] font-black text-white shadow-[0_4px_14px_rgba(239,68,68,0.30)] transition-all hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60 active:scale-95"
+                :disabled="isDeletingProduct"
+                @click="confirmDeleteProduct"
+              >
+                {{ isDeletingProduct ? '删除中...' : '确认下架' }}
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
     </Transition>
   </div>

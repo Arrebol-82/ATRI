@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, nextTick, ref, onMounted, onBeforeUnmount, onUnmounted, watch } from "vue";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts/core";
 import gsap from "gsap";
@@ -9,6 +9,7 @@ definePageMeta({
   middleware: "auth",
 });
 
+const dashboardPageRef = ref<HTMLElement | null>(null);
 const barChartRef = ref<HTMLElement | null>(null);
 const pieChartRef = ref<HTMLElement | null>(null);
 const isDark = useState("admin-dark-mode", () => false);
@@ -176,12 +177,18 @@ const slowSelling = computed(() => {
 });
 
 onMounted(async () => {
-  gsap.from(".stagger-card", {
-    y: 40,
-    opacity: 0,
-    duration: 0.8,
-    stagger: 0.1,
-    ease: "power3.out",
+  nextTick(() => {
+    const cards = dashboardPageRef.value?.querySelectorAll(".stagger-card");
+    if (cards?.length) {
+      gsap.killTweensOf(cards);
+      gsap.from(cards, {
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power3.out",
+      });
+    }
   });
 
   const [
@@ -282,6 +289,14 @@ const handleResize = () => {
   pieChart?.resize();
 };
 
+onBeforeUnmount(() => {
+  const cards = dashboardPageRef.value?.querySelectorAll(".stagger-card");
+  if (cards?.length) {
+    gsap.killTweensOf(cards);
+    gsap.set(cards, { clearProps: "opacity,transform" });
+  }
+});
+
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   barChart?.dispose();
@@ -293,6 +308,7 @@ watch(productSalesChartData, updateBarChartData);
 
 <template>
   <div
+    ref="dashboardPageRef"
     class="dashboard-page min-h-full p-8 text-gray-800 transition-colors duration-500"
     :class="
       isDark ? 'dashboard-dark bg-transparent text-gray-100' : 'bg-transparent'
