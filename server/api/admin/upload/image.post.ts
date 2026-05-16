@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+const BUCKET = "atri";
+const FOLDER = "commodity";
 
 export default defineEventHandler(async (event) => {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -26,19 +28,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const safeName = filePart.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const filename = `${Date.now()}-${safeName}`;
+  const storagePath = `${FOLDER}/${Date.now()}-${safeName}`;
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   const { error } = await supabase.storage
-    .from("news-assets")
-    .upload(filename, filePart.data, { contentType: mimeType, upsert: false });
+    .from(BUCKET)
+    .upload(storagePath, filePart.data, { contentType: mimeType, upsert: false });
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: `上传失败：${error.message}` });
   }
 
-  const { data } = supabase.storage.from("news-assets").getPublicUrl(filename);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
   return { url: data.publicUrl };
 });

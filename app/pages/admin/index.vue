@@ -15,28 +15,29 @@ const isDark = useState("admin-dark-mode", () => false);
 const email = ref("");
 const password = ref("");
 const isLoading = ref(false);
+const errorMessage = ref("");
 
 const handleLogin = async () => {
   if (isLoading.value) return;
   isLoading.value = true;
+  errorMessage.value = "";
 
   try {
-    // 3. 调用真实的 Supabase 认证接口
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
     });
 
     if (error) {
-      // 如果报错（比如密码错了），理智地反馈给用户
-      alert("安全验证未通过: " + error.message);
+      errorMessage.value = "账号或密码错误，请重试";
+      isLoading.value = false;
     } else {
-      // 登录成功，跳转至仪表盘
-      navigateTo("/admin/dashboard");
+      // 保持 loading 状态直到页面跳转完成，防止用户重复点击
+      await navigateTo("/admin/dashboard");
     }
   } catch (err) {
     console.error("系统错误:", err);
-  } finally {
+    errorMessage.value = "网络异常，请稍后重试";
     isLoading.value = false;
   }
 };
@@ -143,6 +144,15 @@ onMounted(() => {
             placeholder="Password"
             required
           />
+        </div>
+
+        <!-- 错误提示 -->
+        <div
+          v-if="errorMessage"
+          class="rounded-xl px-4 py-3 text-sm font-semibold"
+          :class="isDark ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-500'"
+        >
+          {{ errorMessage }}
         </div>
 
         <!-- 登录按钮 -->

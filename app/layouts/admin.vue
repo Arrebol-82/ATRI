@@ -31,12 +31,8 @@ nuxtApp.hook("page:start", startPageLoading);
 nuxtApp.hook("page:finish", stopPageLoading);
 nuxtApp.hook("app:error", stopPageLoading);
 
-// 鍒ゆ柇鏄惁鏄櫥褰曢〉
-const isLoginPage = computed(() => {
-  return route.path === "/admin";
-});
+const isLoginPage = computed(() => route.path === "/admin");
 
-// --- 绮掑瓙涓庢祦鏄熺殑绫诲瀷瀹氫箟 ---
 interface Star {
   distance: number;
   angle: number;
@@ -59,7 +55,6 @@ interface Meteor {
   maxLife: number;
 }
 
-// --- Konami Code 褰╄泲閫昏緫 ---
 const konamiCode = [
   "ArrowUp",
   "ArrowUp",
@@ -75,12 +70,8 @@ const konamiCode = [
 let keySequence: string[] = [];
 
 const checkKonamiCode = (e: KeyboardEvent) => {
-  // 鐧诲綍椤典笉瑙﹀彂褰╄泲
-  if (isLoginPage.value) {
-    return;
-  }
+  if (isLoginPage.value) return;
 
-  // 褰╄泲婵€娲绘椂锛屽彧鏈夋寜 ESC 鎵嶅彇娑?
   if (isEasterEggActive.value) {
     if (e.code === "Escape") {
       isEasterEggActive.value = false;
@@ -106,7 +97,6 @@ const handleLogout = async () => {
   await navigateTo("/admin");
 };
 
-// --- Canvas 鏄熺┖寮曟搸 ---
 const starCanvas = ref<HTMLCanvasElement | null>(null);
 let cleanupCanvas: (() => void) | null = null;
 
@@ -156,7 +146,7 @@ const initParticleSystem = (): (() => void) | null => {
     meteors.push({
       x: Math.random() * width * 1.5,
       y: -50,
-      vx: -baseSpeed * 1.0, // 閿佸畾骞宠瑙掑害
+      vx: -baseSpeed * 1.0,
       vy: baseSpeed * 1.5,
       length: Math.random() * 400 + 350,
       thickness: Math.random() * 1.2 + 1.2,
@@ -169,10 +159,8 @@ const initParticleSystem = (): (() => void) | null => {
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
 
-    // 1. 缁樺埗搴曞眰鏄熺┖
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
-      // 淇 TS 涓ヨ嫑妫€鏌ワ細纭繚 p 瀛樺湪
       if (!p) continue;
 
       p.phase += p.twinkleSpeed;
@@ -192,7 +180,6 @@ const initParticleSystem = (): (() => void) | null => {
       }
     }
 
-    // 2. 娴佹槦璋冨害
     const now = Date.now();
     if (now > nextMeteorTime) {
       const count = Math.random() < 0.15 ? 2 : 1;
@@ -200,10 +187,8 @@ const initParticleSystem = (): (() => void) | null => {
       nextMeteorTime = now + (Math.random() * 5000 + 1000);
     }
 
-    // 3. 缁樺埗娴佹槦
     for (let i = meteors.length - 1; i >= 0; i--) {
       const m = meteors[i];
-      // 淇 TS 涓ヨ嫑妫€鏌ワ細纭繚 m 瀛樺湪
       if (!m) continue;
 
       m.x += m.vx;
@@ -226,7 +211,6 @@ const initParticleSystem = (): (() => void) | null => {
       const tailX = m.x - (m.vx / speedScale) * m.length;
       const tailY = m.y - (m.vy / speedScale) * m.length;
 
-      // 缁樺埗閿愬埄娓愬彉灏惧反
       const gradient = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
       gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity * 0.7})`);
       gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
@@ -239,7 +223,6 @@ const initParticleSystem = (): (() => void) | null => {
       ctx.lineCap = "round";
       ctx.stroke();
 
-      // 缁樺埗鍙戝厜澶撮儴
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.thickness * 1.5, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
@@ -266,21 +249,17 @@ const initParticleSystem = (): (() => void) | null => {
   };
 };
 
-// --- 鐢熷懡鍛ㄦ湡绠＄悊 ---
 let mediaQuery: MediaQueryList | null = null;
 const handleSystemThemeChange = (e: MediaQueryListEvent) => {
   isDark.value = e.matches;
 };
 
 onMounted(() => {
-  // 闅愯棌 admin 椤甸潰鐨勬祻瑙堝櫒婊氬姩鏉?
   document.documentElement.classList.add("hide-body-scrollbar");
-
   window.addEventListener("keydown", checkKonamiCode);
 
   if (window.matchMedia) {
     mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    // 浠呭湪棣栨鎸傝浇涓旀病鏈夋墜鍔ㄨ缃繃鏃跺弬鑰冪郴缁熶富棰?
     if (mediaQuery.matches) isDark.value = true;
     mediaQuery.addEventListener("change", handleSystemThemeChange);
   }
@@ -289,7 +268,6 @@ onMounted(() => {
 onUnmounted(() => {
   stopPageLoading();
   document.documentElement.classList.remove("hide-body-scrollbar");
-
   window.removeEventListener("keydown", checkKonamiCode);
   if (mediaQuery) {
     mediaQuery.removeEventListener("change", handleSystemThemeChange);
@@ -330,6 +308,11 @@ const navItems = [
     path: "/admin/orders",
     icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />`,
   },
+  {
+    name: "News",
+    path: "/admin/news",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />`,
+  },
 ];
 </script>
 
@@ -338,7 +321,6 @@ const navItems = [
     class="relative flex min-h-screen w-full transition-colors duration-500"
     :class="isDark ? 'bg-[#000000]' : 'bg-[#f8f9fa]'"
   >
-    <!-- 鑳屾櫙灞?-->
     <div
       v-if="isDark"
       class="fixed inset-0 overflow-hidden pointer-events-none z-0"
@@ -350,7 +332,6 @@ const navItems = [
       ></div>
     </div>
 
-    <!-- 褰╄泲鎻愮ず灞?-->
     <div
       v-if="isEasterEggActive"
       class="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
@@ -359,18 +340,17 @@ const navItems = [
         <h2
           class="text-4xl font-black tracking-tighter text-white drop-shadow-lg animate-pulse"
         >
-          鉁?
+          ✨
         </h2>
         <p
           class="mt-6 text-gray-300 text-lg cursor-pointer pointer-events-auto hover:text-white transition-colors"
           @click="handleEasterEggClose"
         >
-          鎸?ESC 閿垨鐐瑰嚮杩欓噷杩斿洖
+          按 ESC 键或点击此处关闭
         </p>
       </div>
     </div>
 
-    <!-- 渚ц竟鏍?-->
     <aside
       v-if="!isLoginPage && !isEasterEggActive"
       class="sticky top-0 z-10 flex h-screen w-[84px] shrink-0 flex-col items-center border-r py-10 transition-colors duration-500"
@@ -407,6 +387,7 @@ const navItems = [
           ></svg>
         </NuxtLink>
       </nav>
+
       <div class="mt-auto flex flex-col items-center pb-4">
         <button
           type="button"
@@ -453,7 +434,7 @@ const navItems = [
       >
         <div
           v-if="isPageLoading"
-          class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4"
+          class="fixed top-0 right-0 bottom-0 left-[84px] z-50 flex flex-col items-center justify-center gap-4"
           :class="isDark ? 'bg-[#000000]/80' : 'bg-[#f8f9fa]/80'"
           style="backdrop-filter: blur(4px)"
         >
@@ -498,12 +479,11 @@ button {
 </style>
 
 <style>
-/* 闅愯棌 admin 椤甸潰鐨勬祻瑙堝櫒婊氬姩鏉?*/
 .hide-body-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .hide-body-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 </style>

@@ -40,12 +40,12 @@
 
             <div class="relative mt-5 aspect-[16/9] overflow-hidden rounded-xl border-2 border-sky-200">
               <img
-                :src="selectedNews.image"
+                :src="selectedNews.imageUrl"
                 :alt="selectedNews.title"
                 class="h-full w-full object-cover"
                 loading="eager"
                 decoding="async"
-                :style="{ objectPosition: selectedNews.imagePosition || 'center' }"
+                style="object-position: center"
               />
             </div>
 
@@ -64,17 +64,17 @@
                 <dl class="space-y-3">
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">日程</dt>
-                    <dd>{{ selectedNews.event.date }}</dd>
+                    <dd>{{ selectedNews.eventDate }}</dd>
                   </div>
 
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">会場</dt>
-                    <dd>{{ selectedNews.event.place }}</dd>
+                    <dd>{{ selectedNews.eventPlace }}</dd>
                   </div>
 
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
                     <dt class="font-bold text-sky-500">内容</dt>
-                    <dd>{{ selectedNews.event.content }}</dd>
+                    <dd>{{ selectedNews.eventContent }}</dd>
                   </div>
                 </dl>
               </section>
@@ -150,13 +150,13 @@
           >
             <div class="relative aspect-[16/9] overflow-hidden rounded-lg">
               <img
-                :src="item.image"
+                :src="item.imageUrl"
                 :alt="item.title"
                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 decoding="async"
-                :loading="item.id <= 3 ? 'eager' : 'lazy'"
-                :fetchpriority="item.id <= 3 ? 'high' : 'low'"
-                :style="{ objectPosition: item.imagePosition || 'center' }"
+                :loading="item.sortOrder <= 3 ? 'eager' : 'lazy'"
+                :fetchpriority="item.sortOrder <= 3 ? 'high' : 'low'"
+                style="object-position: center"
               />
 
               <div class="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold tracking-[0.15em] text-sky-500 shadow-sm">
@@ -216,191 +216,14 @@ const detailOverlay = ref(null)
 let scrollFrame = null
 let scrollTimer = null
 
-const newsList = [
-  {
-    id: 1,
-    date: '2026.03.19',
-    title: 'スペシャルイベントの詳細情報を公開！（チケット先行優先販売受付ほか）',
-    image: '/images/news1.jpg',
-    body: [
-      'ATRI記念イベントの詳細情報を公開しました。作品の世界観を楽しめるトークや展示企画など、特別な一日を予定しています。',
-      'チケットの受付期間や参加方法につきましては、下記の概要をご確認ください。今後の追加情報も本ページにて順次お知らせいたします。'
-    ],
-    event: {
-      date: '2026年8月16日（日）',
-      place: 'アクアシティホール',
-      content: 'キャストトーク、展示、来場者特典配布など'
-    },
-    notes: [
-      '内容は予告なく変更となる場合があります。',
-      '会場への直接のお問い合わせはご遠慮ください。'
-    ]
-  },
-  {
-    id: 2,
-    date: '2026.03.06',
-    title: 'スペシャルイベント開催決定！！',
-    image: '/images/news2.jpg',
-    body: [
-      'ATRI公式スペシャルイベントの開催が決定しました。',
-      '開催日時、出演者、チケット情報などの詳細は後日発表いたします。'
-    ],
-    event: {
-      date: '後日公開予定',
-      place: '後日公開予定',
-      content: 'スペシャルトーク、最新情報発表など'
-    },
-    notes: ['詳細は後日発表いたします。']
-  },
-  {
-    id: 3,
-    date: '2026.03.03',
-    title: '甘慣れな子誕生日記念♡直筆サイン色紙をプレゼント',
-    image: '/images/news3.jpg',
-    body: [
-      'キャラクターの誕生日を記念して、抽選プレゼントキャンペーンを実施します。',
-      '対象期間中に指定の方法で応募された方の中から、直筆サイン色紙をプレゼントいたします。'
-    ],
-    event: {
-      date: '2026年3月3日（火）〜3月10日（火）',
-      place: '公式SNS',
-      content: 'フォロー＆リポストキャンペーン'
-    },
-    notes: ['応募には公式SNSアカウントのフォローが必要です。']
-  },
-  {
-    id: 4,
-    date: '2026.03.16',
-    title: 'イベント情報と追加キャンペーンのお知らせを公開しました',
-    image: '/images/news4.jpg',
-    body: [
-      'イベントに関する追加情報を公開しました。',
-      '詳細は各項目をご確認ください。'
-    ],
-    event: {
-      date: '2026年3月16日（月）',
-      place: '公式サイト内',
-      content: '追加キャンペーン情報公開'
-    },
-    notes: ['キャンペーン内容は変更となる可能性があります。']
-  },
-  {
-    id: 5,
-    date: '2026.02.13',
-    title: '【ゲーマーズ限定】Blu-ray全巻購入キャンペーンのお知らせ',
-    image: '/images/news5.jpg',
-    body: ['Blu-ray全巻購入者を対象とした限定キャンペーンを実施します。'],
-    event: {
-      date: '2026年2月13日（金）開始',
-      place: '対象店舗',
-      content: 'Blu-ray購入者限定特典キャンペーン'
-    },
-    notes: ['特典はなくなり次第終了となります。']
-  },
-  {
-    id: 6,
-    date: '2026.01.19',
-    title: 'スタッフ＆キャストによるトークイベント情報を公開しました',
-    image: '/images/news6.jpg',
-    body: ['スタッフ＆キャストによるスペシャルトークイベントの情報を公開しました。'],
-    event: {
-      date: '2026年1月19日（月）',
-      place: 'イベント会場',
-      content: 'スタッフ＆キャストトーク'
-    },
-    notes: ['登壇者は予告なく変更となる場合があります。']
-  },
-  {
-    id: 7,
-    date: '2025.12.25',
-    title: '公式サイトを更新しました',
-    image: '/images/news7.jpg',
-    body: [
-      '公式サイトの情報を更新しました。',
-      '今後も最新情報を順次公開予定です。'
-    ],
-    event: {
-      date: '2025年12月25日（木）',
-      place: '公式サイト',
-      content: 'サイト更新情報'
-    },
-    notes: ['最新情報は公式サイトをご確認ください。']
-  },
-  {
-    id: 8,
-    date: '2025.12.12',
-    title: 'キャラクター情報を追加公開しました',
-    image: '/images/news8.jpg',
-    body: ['キャラクター紹介ページに新しい情報を追加しました。'],
-    event: {
-      date: '2025年12月12日（金）',
-      place: 'キャラクターページ',
-      content: 'キャラクター情報追加'
-    },
-    notes: ['掲載内容は変更となる場合があります。']
-  },
-  {
-    id: 9,
-    date: '2025.11.30',
-    title: 'グッズ情報を公開しました',
-    image: '/images/news9.jpg',
-    body: ['関連グッズの情報を公開しました。'],
-    event: {
-      date: '2025年11月30日（日）',
-      place: '商品ページ',
-      content: 'グッズ情報公開'
-    },
-    notes: ['商品画像はイメージです。']
-  },
-  {
-    id: 10,
-    date: '2025.11.15',
-    title: 'ストーリーページを更新しました',
-    image: '/images/news10.png',
-    body: ['ストーリーページの内容を更新しました。'],
-    event: {
-      date: '2025年11月15日（土）',
-      place: 'ストーリーページ',
-      content: 'ストーリー情報更新'
-    },
-    notes: ['一部内容にはネタバレを含む場合があります。']
-  },
-  {
-    id: 11,
-    date: '2025.10.28',
-    title: '場面カットを追加しました',
-    image: '/images/news11.jpg',
-    imagePosition: 'center 30%',
-    body: ['ギャラリーページに新しい場面カットを追加しました。'],
-    event: {
-      date: '2025年10月28日（火）',
-      place: 'ギャラリーページ',
-      content: '場面カット追加'
-    },
-    notes: ['画像は開発中のものを含む場合があります。']
-  },
-  {
-    id: 12,
-    date: '2025.10.10',
-    title: 'スペシャルコンテンツを公開しました',
-    image: '/images/news12.jpg',
-    imagePosition: 'center 25%',
-    body: ['スペシャルページに新しいコンテンツを公開しました。'],
-    event: {
-      date: '2025年10月10日（金）',
-      place: 'スペシャルページ',
-      content: 'スペシャルコンテンツ公開'
-    },
-    notes: ['公開期間は変更となる場合があります。']
-  }
-]
+const { data: newsList } = await useFetch('/api/news', { default: () => [] })
 
 const displayedNews = computed(() => {
   if (props.showFullPage) {
-    return newsList
+    return newsList.value
   }
 
-  return newsList.slice(0, 3)
+  return newsList.value.slice(0, 3)
 })
 
 function nextFrame() {

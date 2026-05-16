@@ -194,7 +194,7 @@ onMounted(async () => {
   const [
     { init, use },
     { BarChart, PieChart },
-    { GridComponent },
+    { GridComponent, TooltipComponent },
     { CanvasRenderer },
   ] = await Promise.all([
     import("echarts/core"),
@@ -203,7 +203,7 @@ onMounted(async () => {
     import("echarts/renderers"),
   ]);
 
-  use([BarChart, PieChart, GridComponent, CanvasRenderer]);
+  use([BarChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
   if (barChartRef.value) {
     barChart = init(barChartRef.value);
@@ -211,14 +211,22 @@ onMounted(async () => {
       grid: { left: "10%", right: "0%", bottom: "10%", top: "10%" },
       tooltip: {
         trigger: "axis",
-        axisPointer: { type: "shadow" },
+        axisPointer: {
+          type: "shadow",
+          shadowStyle: { color: "rgba(91, 78, 255, 0.08)" },
+        },
+        backgroundColor: "#1f2937",
+        borderColor: "transparent",
+        borderRadius: 12,
+        padding: [10, 14],
+        textStyle: { color: "#f3f6fb", fontSize: 13 },
         formatter(params: any) {
           const current = Array.isArray(params) ? params[0] : params;
           const product = productSalesChartData.value[current?.dataIndex ?? 0];
           const name = product?.name ?? current?.axisValue ?? "";
           const value = product?.soldQuantity ?? current?.value ?? 0;
 
-          return `${name}<br/>销量：${value}`;
+          return `<div style="font-weight:700;margin-bottom:6px;font-size:13px">${name}</div><div style="font-size:12px;color:#a7b0c2">销量：<span style="color:#a78bfa;font-weight:700;font-size:14px">${value}</span> 件</div>`;
         },
       },
       xAxis: {
@@ -245,6 +253,13 @@ onMounted(async () => {
           itemStyle: {
             color: "#5b4eff",
             borderRadius: [20, 20, 20, 20],
+          },
+          emphasis: {
+            itemStyle: {
+              color: "#7c6fff",
+              shadowBlur: 16,
+              shadowColor: "rgba(91, 78, 255, 0.5)",
+            },
           },
         },
       ],

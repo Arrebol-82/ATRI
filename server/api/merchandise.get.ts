@@ -1,7 +1,7 @@
 let prisma: any = null;
 
 const BASE_URL =
-  "https://irkydgphndgopzicgqou.supabase.co/storage/v1/object/public/atri/";
+  "https://irkydgphndgopzicgqou.supabase.co/storage/v1/object/public/atri/commodity/";
 
 const fallbackMerchandise = [
   {
