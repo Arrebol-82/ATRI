@@ -1,7 +1,8 @@
 <template>
   <section
     ref="newsPageRoot"
-    class="relative min-h-screen overflow-hidden bg-gradient-to-b from-sky-50/50 to-white text-[#24424b]"
+    class="relative min-h-screen overflow-hidden text-[#24424b]"
+    :class="showFullPage ? 'bg-gradient-to-b from-sky-50/50 to-white' : 'bg-white'"
   >
     <!-- 背景装饰 -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -27,7 +28,7 @@
             <div class="mb-6 flex items-center justify-end">
               <button
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white/90 text-xl font-black leading-none text-sky-400 shadow-sm transition hover:border-sky-300 hover:bg-sky-50"
-                aria-label="Close news detail"
+                aria-label="关闭新闻详情"
                 @click="closeDetailToNewsList"
               >
                 ×
@@ -59,7 +60,7 @@
               </p>
 
               <section class="rounded-2xl bg-sky-50/80 p-6">
-                <h3 class="mb-4 text-xl font-black text-sky-500">イベント概要</h3>
+                <h3 class="mb-4 text-xl font-black text-sky-500">活动概要</h3>
 
                 <dl class="space-y-3">
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
@@ -68,7 +69,7 @@
                   </div>
 
                   <div class="grid gap-1 md:grid-cols-[120px_1fr]">
-                    <dt class="font-bold text-sky-500">会場</dt>
+                    <dt class="font-bold text-sky-500">会场</dt>
                     <dd>{{ selectedNews.eventPlace }}</dd>
                   </div>
 
@@ -80,7 +81,7 @@
               </section>
 
               <section>
-                <h3 class="mb-4 text-xl font-black text-sky-500">注意事項</h3>
+                <h3 class="mb-4 text-xl font-black text-sky-500">注意事项</h3>
 
                 <ul class="list-disc space-y-2 pl-6">
                   <li v-for="note in selectedNews.notes" :key="note">
@@ -92,7 +93,7 @@
 
             <div class="mt-12 border-t-2 border-sky-100 pt-8">
               <p class="mb-4 text-sm font-black tracking-[0.3em] text-sky-400">
-                SHARE
+                分享
               </p>
 
               <div class="flex gap-3">
@@ -122,7 +123,7 @@
             </h1>
 
             <p class="mb-5 text-sm font-bold tracking-[0.35em] text-sky-400 md:text-base">
-              ニュース
+              新闻
             </p>
           </div>
 
@@ -135,7 +136,7 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
-            <span>BACK</span>
+            <span>返回</span>
           </button>
         </div>
       </header>
@@ -154,13 +155,13 @@
                 :alt="item.title"
                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 decoding="async"
-                :loading="item.sortOrder <= 3 ? 'eager' : 'lazy'"
-                :fetchpriority="item.sortOrder <= 3 ? 'high' : 'low'"
+                :loading="(item.sortOrder ?? 99) <= 3 ? 'eager' : 'lazy'"
+                :fetchpriority="(item.sortOrder ?? 99) <= 3 ? 'high' : 'low'"
                 style="object-position: center"
               />
 
               <div class="absolute left-4 top-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold tracking-[0.15em] text-sky-500 shadow-sm">
-                NEWS
+                新闻
               </div>
             </div>
 
@@ -181,7 +182,7 @@
             :disabled="isRouteChanging"
             @click="goNewsFullPage"
           >
-            <span>MORE</span>
+            <span>更多</span>
 
             <span class="transition-transform group-hover:translate-x-1">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

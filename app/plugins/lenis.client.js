@@ -2,31 +2,41 @@ import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
 
 export default defineNuxtPlugin(() => {
-  const lenis = new Lenis({
-    autoRaf: true,
+  let lenis = null
 
-    // 接近动画官网那种：柔，但不拖
-    lerp: 0.105,
+  const createLenis = () => {
+    if (lenis) return lenis
 
-    // 不再压得太慢，让滚动更自然
-    wheelMultiplier: 1,
+    lenis = new Lenis({
+      autoRaf: true,
+      lerp: 0.105,
+      wheelMultiplier: 1,
+      touchMultiplier: 1.1,
+      smoothWheel: true,
+      prevent: (node) => node?.closest?.('[data-lenis-prevent]')
+    })
 
-    // 触控板 / 触摸设备保持自然
-    touchMultiplier: 1.1,
+    window.__lenis = lenis
+    window.dispatchEvent(new CustomEvent('atri-lenis-ready', { detail: { lenis } }))
 
-    smoothWheel: true,
+    return lenis
+  }
 
-    // 不在 Lenis 里接管锚点跳转。
-    // 返回首页 NEWS 模块时需要瞬间定位，避免中途闪到 STORY 区域。
+  const scheduleLenis = () => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(createLenis, { timeout: 1600 })
+    } else {
+      window.setTimeout(createLenis, 900)
+    }
+  }
 
-    prevent: (node) => node?.closest?.('[data-lenis-prevent]')
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(scheduleLenis)
   })
-
-  window.__lenis = lenis
 
   if (import.meta.hot) {
     import.meta.hot.dispose(() => {
-      lenis.destroy()
+      lenis?.destroy()
 
       if (window.__lenis === lenis) {
         delete window.__lenis
@@ -36,7 +46,11 @@ export default defineNuxtPlugin(() => {
 
   return {
     provide: {
-      lenis
+      lenis: {
+        get instance() {
+          return lenis
+        }
+      }
     }
   }
 })

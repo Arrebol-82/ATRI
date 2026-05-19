@@ -1,14 +1,16 @@
 <script setup>
 import { gsap } from 'gsap'
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import CharactersSection from '~/components/site/CharactersSection.vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import HomeSidebar from '~/components/site/HomeSidebar.vue'
 import Footer from '~/components/Footer.vue'
 import { homeNavItems } from '~/constants/navigation'
-import MascotGirlEasterEgg from '~/components/site/MascotGirlEasterEgg.vue'
-import NewsSection from './news.vue'
-import ScenesSection from './scenes.vue'
-import StorySection from './story.vue'
+
+const CharactersSection = defineAsyncComponent(() => import('~/components/site/CharactersSection.vue'))
+const MascotGirlEasterEgg = defineAsyncComponent(() => import('~/components/site/MascotGirlEasterEgg.vue'))
+const ThanksWatchingSection = defineAsyncComponent(() => import('~/components/site/ThanksWatchingSection.vue'))
+const NewsSection = defineAsyncComponent(() => import('./news.vue'))
+const ScenesSection = defineAsyncComponent(() => import('./scenes.vue'))
+const StorySection = defineAsyncComponent(() => import('./story.vue'))
 
 const heroItems = [
   { image: '/images/sy1.jpg', thumb: '/images/tx1.jpg', showTitle: true },
@@ -18,6 +20,94 @@ const heroItems = [
   { image: '/images/sy5.jpg', thumb: '/images/tx5.jpg', showTitle: false }
 ]
 
+const DEFAULT_LANGUAGE = 'zh'
+const LANGUAGE_STORAGE_KEY = 'atriSiteLanguage'
+
+const languageOptions = [
+  { code: 'zh', name: '中文', htmlLang: 'zh-CN' },
+  { code: 'en', name: 'English', htmlLang: 'en' },
+  { code: 'ja', name: '日本語', htmlLang: 'ja' }
+]
+
+const languageNameMap = languageOptions.reduce((map, option) => {
+  map[option.code] = option.name
+  return map
+}, {})
+
+const languageHtmlMap = languageOptions.reduce((map, option) => {
+  map[option.code] = option.htmlLang
+  return map
+}, {})
+
+const translations = {
+  zh: {
+    'site.tagline': 'Blue Memory Store',
+    'site.project': 'Tech Festival Project',
+    'intro.click': 'CLICK',
+    'aria.openMenu': '打开菜单',
+    'aria.closeMenu': '关闭菜单',
+    'aria.closeLanguage': '关闭语言选择',
+    'language.eyebrow': 'LANGUAGE',
+    'language.title': '你选择的是？',
+    'language.confirmTitle': '确定选择「{language}」吗？',
+    'language.optionHint': '中文 / 英文 / 日文',
+    'language.confirmHint': '点击确定后，整个网站语言会切换过去',
+    'language.reselect': '重选',
+    'language.confirm': '确定',
+    'language.imageAlt': '语言切换入口',
+    'nav.story': '故事',
+    'nav.characters': '角色',
+    'nav.scenes': '场景',
+    'nav.news': '新闻',
+    'nav.mascot': '彩蛋',
+    'nav.thanks': '结尾'
+  },
+  en: {
+    'site.tagline': 'Blue Memory Store',
+    'site.project': 'Tech Festival Project',
+    'intro.click': 'CLICK',
+    'aria.openMenu': 'Open menu',
+    'aria.closeMenu': 'Close menu',
+    'aria.closeLanguage': 'Close language selector',
+    'language.eyebrow': 'LANGUAGE',
+    'language.title': 'Choose a language',
+    'language.confirmTitle': 'Switch to {language}?',
+    'language.optionHint': 'Chinese / English / Japanese',
+    'language.confirmHint': 'After confirming, the whole site language will change.',
+    'language.reselect': 'Back',
+    'language.confirm': 'Confirm',
+    'language.imageAlt': 'Language switch entry',
+    'nav.story': 'Story',
+    'nav.characters': 'Characters',
+    'nav.scenes': 'Scenes',
+    'nav.news': 'News',
+    'nav.mascot': 'Easter Egg',
+    'nav.thanks': 'Thanks'
+  },
+  ja: {
+    'site.tagline': 'Blue Memory Store',
+    'site.project': 'Tech Festival Project',
+    'intro.click': 'CLICK',
+    'aria.openMenu': 'メニューを開く',
+    'aria.closeMenu': 'メニューを閉じる',
+    'aria.closeLanguage': '言語選択を閉じる',
+    'language.eyebrow': 'LANGUAGE',
+    'language.title': '言語を選択してください',
+    'language.confirmTitle': '「{language}」に切り替えますか？',
+    'language.optionHint': '中国語 / 英語 / 日本語',
+    'language.confirmHint': '確定すると、サイト全体の言語が切り替わります。',
+    'language.reselect': '選び直す',
+    'language.confirm': '確定',
+    'language.imageAlt': '言語切り替え入口',
+    'nav.story': 'ストーリー',
+    'nav.characters': 'キャラクター',
+    'nav.scenes': 'シーン',
+    'nav.news': 'ニュース',
+    'nav.mascot': 'イースターエッグ',
+    'nav.thanks': 'エンディング'
+  }
+}
+
 const HOME_INTRO_PLAYED_KEY = 'atriHomeIntroPlayed'
 const SKIP_HOME_INTRO_KEY = 'atriSkipHomeIntroOnce'
 
@@ -25,6 +115,7 @@ const introVisible = ref(false)
 const showVideo = ref(false)
 const introFinished = ref(false)
 const bootMaskVisible = ref(true)
+const longPageReady = ref(false)
 
 const introScreen = ref(null)
 const introVideoLayer = ref(null)
@@ -36,6 +127,11 @@ const openingVideo = ref(null)
 const heroVisual = ref(null)
 const heroTitleImage = ref(null)
 const nextSlideImage = ref(null)
+const heroProgressBar = ref(null)
+const languageImage = ref(null)
+const languageBubble = ref(null)
+const languageImageFailed = ref(false)
+const languageSpinLocked = ref(false)
 const thumbButtons = ref([])
 
 const activeIndex = ref(0)
@@ -46,15 +142,153 @@ const isSwitching = ref(false)
 const menuOpen = ref(false)
 const isMenuIconVisible = ref(false)
 
+const languageBubbleVisible = ref(false)
+const currentLanguage = ref(DEFAULT_LANGUAGE)
+const selectedLanguage = ref('')
+
+const selectedLanguageLabel = computed(() => languageNameMap[selectedLanguage.value] || '')
+
+function normalizeLanguage(language) {
+  return languageOptions.some((option) => option.code === language)
+    ? language
+    : DEFAULT_LANGUAGE
+}
+
+function formatMessage(message, params = {}) {
+  return Object.entries(params).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, value)
+  }, message)
+}
+
+function t(key, params = {}) {
+  const language = normalizeLanguage(currentLanguage.value)
+  const message = translations[language]?.[key] ?? translations[DEFAULT_LANGUAGE]?.[key] ?? key
+
+  return formatMessage(message, params)
+}
+
+function updateDocumentLanguage(language) {
+  if (typeof document === 'undefined') return
+
+  document.documentElement.lang = languageHtmlMap[language] || languageHtmlMap[DEFAULT_LANGUAGE]
+}
+
+function saveLanguage(language) {
+  if (typeof window === 'undefined') return
+
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
+  } catch {}
+}
+
+function getSavedLanguage() {
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE
+
+  try {
+    return normalizeLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY) || DEFAULT_LANGUAGE)
+  } catch {
+    return DEFAULT_LANGUAGE
+  }
+}
+
+function setLanguage(language) {
+  const normalizedLanguage = normalizeLanguage(language)
+
+  currentLanguage.value = normalizedLanguage
+  updateDocumentLanguage(normalizedLanguage)
+  saveLanguage(normalizedLanguage)
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('atri-language-change', {
+        detail: {
+          language: normalizedLanguage,
+          label: languageNameMap[normalizedLanguage]
+        }
+      })
+    )
+  }
+}
+
+function initLanguage() {
+  const savedLanguage = getSavedLanguage()
+
+  currentLanguage.value = savedLanguage
+  updateDocumentLanguage(savedLanguage)
+}
+
+function getNavigationLabelKey(item) {
+  const rawValues = [
+    item?.href,
+    item?.to,
+    item?.path,
+    item?.id,
+    item?.label,
+    item?.title,
+    item?.name,
+    item?.text
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (rawValues.includes('characters')) return 'nav.characters'
+  if (rawValues.includes('scenes')) return 'nav.scenes'
+  if (rawValues.includes('news')) return 'nav.news'
+  if (rawValues.includes('mascot') || rawValues.includes('easter')) return 'nav.mascot'
+  if (rawValues.includes('thanks')) return 'nav.thanks'
+  if (rawValues.includes('story')) return 'nav.story'
+
+  return ''
+}
+
+const translatedHomeNavItems = computed(() => {
+  return homeNavItems.map((item) => {
+    const labelKey = getNavigationLabelKey(item)
+
+    if (!labelKey) return item
+
+    const translatedLabel = t(labelKey)
+
+    return {
+      ...item,
+      label: translatedLabel,
+      title: translatedLabel,
+      name: translatedLabel,
+      text: translatedLabel
+    }
+  })
+})
+
+initLanguage()
+
+provide('atriI18n', {
+  currentLanguage,
+  languageOptions,
+  t,
+  setLanguage
+})
+
 const route = useRoute()
 const newsReturnMaskVisible = useState('news-return-mask-visible', () => false)
+
+watch(
+  () => route.fullPath,
+  () => {
+    closeMenu()
+  }
+)
 
 let introTimeline
 let videoCall
 let playCall
 let finishTween
 let slideTween
+let heroProgressTween
 let introPointer = { x: 0, y: 0 }
+
+const HERO_VISUAL_CHANGE_DURATION = 4.5
+
 let menuIconRaf = 0
 let returnMaskReleaseTimer = 0
 
@@ -141,8 +375,6 @@ function updateMenuIconVisible() {
   }
 
   const coverRect = coverPage.getBoundingClientRect()
-
-  // 长页面完全覆盖首页后才显示菜单图标
   const shouldShow = coverRect.top <= 0
 
   isMenuIconVisible.value = shouldShow
@@ -169,6 +401,63 @@ function toggleMenu() {
 
 function closeMenu() {
   menuOpen.value = false
+}
+
+function handleLenisReady(event) {
+  const lenis = event?.detail?.lenis || window.__lenis
+
+  if (lenis?.on) {
+    lenis.on('scroll', handleMenuIconScroll)
+  }
+
+  if (ScrollTriggerPlugin && !lenisScrollTriggerHandler && lenis?.on) {
+    lenisScrollTriggerHandler = () => ScrollTriggerPlugin.update()
+    lenis.on('scroll', lenisScrollTriggerHandler)
+  }
+}
+
+function runWhenBrowserIsCalm(callback, timeout = 1400) {
+  if (typeof window === 'undefined') return
+
+  const schedule = () => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(callback, { timeout })
+    } else {
+      window.setTimeout(callback, Math.min(timeout, 900))
+    }
+  }
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(schedule)
+  })
+}
+
+function ensureLongPageReady() {
+  if (longPageReady.value) return
+  longPageReady.value = true
+}
+
+function preloadHeroImages() {
+  if (typeof window === 'undefined') return
+
+  heroItems.slice(1).forEach((item) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.src = item.image
+  })
+}
+
+function handleMenuPanelNavigationClick(event) {
+  if (typeof window === 'undefined') return
+
+  const target = event.target
+  const navLink = target?.closest?.('a')
+
+  if (!navLink) return
+
+  window.setTimeout(() => {
+    closeMenu()
+  }, 160)
 }
 
 function setThumbButtonRef(element, index) {
@@ -198,6 +487,150 @@ function syncThumbButtons() {
   })
 }
 
+function getNextHeroIndex() {
+  return (activeIndex.value + 1) % heroItems.length
+}
+
+function stopHeroProgress() {
+  heroProgressTween?.kill()
+  heroProgressTween = null
+
+  if (heroProgressBar.value) {
+    gsap.set(heroProgressBar.value, {
+      scaleX: 0,
+      transformOrigin: 'left center'
+    })
+  }
+}
+
+function startHeroProgress() {
+  if (typeof window === 'undefined') return
+  if (!heroProgressBar.value || heroItems.length <= 1) return
+  if (introVisible.value || bootMaskVisible.value || newsReturnMaskVisible.value) return
+
+  heroProgressTween?.kill()
+
+  gsap.set(heroProgressBar.value, {
+    scaleX: 0,
+    transformOrigin: 'left center'
+  })
+
+  heroProgressTween = gsap.to(heroProgressBar.value, {
+    scaleX: 1,
+    duration: HERO_VISUAL_CHANGE_DURATION,
+    ease: 'none',
+    onComplete: () => {
+      heroProgressTween = null
+      selectHero(getNextHeroIndex())
+    }
+  })
+}
+
+function restartHeroProgress() {
+  stopHeroProgress()
+
+  nextTick(() => {
+    startHeroProgress()
+  })
+}
+
+function openLanguageBubble() {
+  languageBubbleVisible.value = true
+
+  nextTick(() => {
+    if (!languageBubble.value) return
+
+    gsap.killTweensOf(languageBubble.value)
+
+    gsap.fromTo(
+      languageBubble.value,
+      {
+        autoAlpha: 0,
+        x: 18,
+        scale: 0.86,
+        rotation: -2
+      },
+      {
+        autoAlpha: 1,
+        x: 0,
+        scale: 1,
+        rotation: 0,
+        duration: 0.38,
+        ease: 'back.out(1.7)'
+      }
+    )
+  })
+}
+
+function closeLanguageBubble() {
+  if (!languageBubble.value) {
+    languageBubbleVisible.value = false
+    selectedLanguage.value = ''
+    return
+  }
+
+  gsap.killTweensOf(languageBubble.value)
+
+  gsap.to(languageBubble.value, {
+    autoAlpha: 0,
+    x: 12,
+    scale: 0.92,
+    duration: 0.2,
+    ease: 'power2.in',
+    onComplete: () => {
+      languageBubbleVisible.value = false
+      selectedLanguage.value = ''
+    }
+  })
+}
+
+function chooseLanguage(language) {
+  selectedLanguage.value = normalizeLanguage(language)
+}
+
+function confirmLanguage() {
+  if (selectedLanguage.value) {
+    setLanguage(selectedLanguage.value)
+  }
+
+  closeLanguageBubble()
+}
+
+function resetLanguageChoice() {
+  selectedLanguage.value = ''
+}
+
+function handleLanguageImageError() {
+  languageImageFailed.value = true
+}
+
+function spinLanguageImage() {
+  if (!languageImage.value || languageSpinLocked.value) return
+
+  languageSpinLocked.value = true
+  languageBubbleVisible.value = false
+  selectedLanguage.value = ''
+
+  gsap.killTweensOf(languageImage.value)
+  gsap.killTweensOf(languageBubble.value)
+  gsap.set(languageImage.value, {
+    rotation: 0,
+    transformOrigin: '50% 50%'
+  })
+
+  gsap.to(languageImage.value, {
+    rotation: 360,
+    duration: 0.9,
+    ease: 'power2.inOut',
+    overwrite: true,
+    onComplete: () => {
+      gsap.set(languageImage.value, { rotation: 0 })
+      languageSpinLocked.value = false
+      openLanguageBubble()
+    }
+  })
+}
+
 function enterHome() {
   if (introFinished.value) return
 
@@ -215,6 +648,10 @@ function enterHome() {
     onComplete: () => {
       introVisible.value = false
       updateMenuIconVisible()
+
+      nextTick(() => {
+        startHeroProgress()
+      })
     }
   })
 }
@@ -270,7 +707,14 @@ function resetParallax() {
 async function selectHero(index) {
   const item = heroItems[index]
 
-  if (!item || isSwitching.value || item.image === currentImage.value) return
+  if (!item || isSwitching.value) return
+
+  if (item.image === currentImage.value) {
+    restartHeroProgress()
+    return
+  }
+
+  stopHeroProgress()
 
   isSwitching.value = true
   activeIndex.value = index
@@ -301,6 +745,10 @@ async function selectHero(index) {
       currentImage.value = item.image
       nextImage.value = ''
       isSwitching.value = false
+
+      nextTick(() => {
+        startHeroProgress()
+      })
     }
   })
 
@@ -585,7 +1033,9 @@ async function setupLongPageMotion() {
       trigger: revealTrigger
     })
 
-    if (inner) {
+    const shouldUseInnerParallax = !['characters', 'scenes'].includes(section.id)
+
+    if (inner && shouldUseInnerParallax) {
       const parallaxAnimation = gsap.fromTo(
         inner,
         {
@@ -643,13 +1093,14 @@ onMounted(async () => {
 
   window.addEventListener('scroll', handleMenuIconScroll, { passive: true })
   window.addEventListener('resize', handleMenuIconScroll)
+  window.addEventListener('atri-lenis-ready', handleLenisReady)
 
   if (window.__lenis?.on) {
     window.__lenis.on('scroll', handleMenuIconScroll)
   }
 
   const hasHash = typeof window !== 'undefined' ? window.location.hash : ''
-  const validSections = ['#story', '#characters', '#scenes', '#news']
+  const validSections = ['#story', '#characters', '#scenes', '#news', '#mascot-easteregg', '#thanks-watching']
 
   const scrollToNews =
     newsReturnMaskVisible.value ||
@@ -657,6 +1108,16 @@ onMounted(async () => {
     route.query.section === 'news' ||
     hasHash === '#news' ||
     isFromNewsPageRoute()
+
+  const shouldPrepareLongPageImmediately = Boolean(
+    scrollToNews ||
+    route.query.section ||
+    (hasHash && validSections.includes(hasHash))
+  )
+
+  if (shouldPrepareLongPageImmediately) {
+    ensureLongPageReady()
+  }
 
   if (scrollToNews) {
     bootMaskVisible.value = true
@@ -807,28 +1268,37 @@ onMounted(async () => {
       })
 
       finishTween = gsap.delayedCall(4.2, () => {
-        setupLongPageMotion()
+        ensureLongPageReady()
+
+        nextTick(() => {
+          setupLongPageMotion()
+        })
       })
     } else {
       bootMaskVisible.value = false
 
       requestAnimationFrame(() => {
-        setupLongPageMotion()
+        runWhenBrowserIsCalm(async () => {
+          ensureLongPageReady()
+          await nextTick()
+          setupLongPageMotion()
+        })
       })
     }
   }
 
-  heroItems.forEach((item) => {
-    const image = new Image()
-    image.src = item.image
-  })
+  runWhenBrowserIsCalm(preloadHeroImages, 2200)
 
-  nextTick(syncThumbButtons)
+  nextTick(() => {
+    syncThumbButtons()
+    startHeroProgress()
+  })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleMenuIconScroll)
   window.removeEventListener('resize', handleMenuIconScroll)
+  window.removeEventListener('atri-lenis-ready', handleLenisReady)
 
   if (window.__lenis?.off) {
     window.__lenis.off('scroll', handleMenuIconScroll)
@@ -852,13 +1322,18 @@ onBeforeUnmount(() => {
   playCall?.kill()
   finishTween?.kill()
   slideTween?.kill()
-
+  heroProgressTween?.kill()
   gsap.killTweensOf(introClickCursor.value)
+  gsap.killTweensOf(languageImage.value)
+  gsap.killTweensOf(languageBubble.value)
 })
 </script>
 
 <template>
-  <main class="home-page-root min-h-screen overflow-x-hidden bg-white text-[#102a3a]">
+  <main
+    class="home-page-root min-h-screen overflow-x-hidden bg-white text-[#102a3a]"
+    :data-language="currentLanguage"
+  >
     <div
       v-if="bootMaskVisible || newsReturnMaskVisible"
       class="boot-mask fixed inset-0 z-[10000] h-screen w-full bg-white"
@@ -882,7 +1357,7 @@ onBeforeUnmount(() => {
           class="block h-full w-full object-cover"
           muted
           playsinline
-          preload="auto"
+          preload="metadata"
           @ended="enterHome"
         >
           <source src="/videos/ATRI2.mp4" type="video/mp4">
@@ -905,7 +1380,7 @@ onBeforeUnmount(() => {
         ref="introClickCursor"
         class="pointer-events-none fixed left-0 top-0 z-[4] flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#102a3a]/70 bg-[#c8ebff]/90 text-[10px] font-bold tracking-[0.16em] text-[#102a3a] opacity-0 shadow-[0_12px_34px_rgba(16,42,58,0.35)] backdrop-blur-md"
       >
-        CLICK
+        {{ t('intro.click') }}
       </div>
     </div>
 
@@ -915,7 +1390,7 @@ onBeforeUnmount(() => {
         type="button"
         class="menu-toggle fixed right-8 top-8 z-[10001]"
         :class="{ 'is-open': menuOpen }"
-        :aria-label="menuOpen ? 'Close menu' : 'Open menu'"
+        :aria-label="menuOpen ? t('aria.closeMenu') : t('aria.openMenu')"
         :aria-expanded="menuOpen"
         @click="toggleMenu"
       >
@@ -935,7 +1410,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="menu-scrim absolute inset-0 h-full w-full bg-white/70 backdrop-blur-[2px]"
-          aria-label="Close menu"
+          :aria-label="t('aria.closeMenu')"
           @click="closeMenu"
         />
 
@@ -949,17 +1424,17 @@ onBeforeUnmount(() => {
             </h2>
 
             <p class="mt-1.5 text-xs tracking-[0.08em] text-[#102a3a]/60">
-              Blue Memory Store
+              {{ t('site.tagline') }}
             </p>
           </div>
 
-          <div class="menu-panel-body" @click="closeMenu">
-            <HomeSidebar :items="homeNavItems" />
+          <div class="menu-panel-body" @click="handleMenuPanelNavigationClick">
+            <HomeSidebar :items="translatedHomeNavItems" />
           </div>
 
           <div class="menu-panel-foot mt-auto border-t border-[rgba(120,180,210,0.26)] pt-[18px]">
             <p class="text-[11px] tracking-[0.08em] text-[#102a3a]/60">
-              Tech Festival Project
+              {{ t('site.project') }}
             </p>
 
             <span class="mt-1.5 block font-serif text-xl text-[#102a3a]">
@@ -983,6 +1458,9 @@ onBeforeUnmount(() => {
           :src="currentImage"
           alt=""
           class="hero-parallax absolute inset-0 block h-full w-full scale-[1.04] object-cover object-center transition-transform duration-200 ease-out will-change-transform"
+          decoding="async"
+          fetchpriority="high"
+          loading="eager"
         >
 
         <img
@@ -1016,6 +1494,8 @@ onBeforeUnmount(() => {
               :src="item.thumb"
               alt=""
               class="block h-full w-full rounded-[10px] object-cover"
+              decoding="async"
+              loading="lazy"
             >
           </button>
         </div>
@@ -1028,15 +1508,138 @@ onBeforeUnmount(() => {
           </h1>
 
           <p class="mt-1.5 text-xs tracking-[0.08em] text-[#102a3a]/60">
-            Blue Memory Store
+            {{ t('site.tagline') }}
           </p>
         </div>
 
-        <HomeSidebar :items="homeNavItems" />
+        <div class="shrink-0">
+          <HomeSidebar :items="translatedHomeNavItems" />
+        </div>
 
-        <div class="mt-auto border-t border-[rgba(120,180,210,0.26)] pt-[18px]">
+        <div class="hero-visual-change-nav">
+          <div class="hero-visual-change-title">
+            VISUAL CHANGE
+          </div>
+
+          <div class="hero-visual-progress-line">
+            <span class="hero-visual-progress-dot" />
+
+            <span class="hero-visual-progress-track">
+              <span
+                ref="heroProgressBar"
+                class="hero-visual-progress-bar"
+              />
+            </span>
+          </div>
+        </div>
+
+        <div class="language-picker relative z-10 mt-auto flex shrink-0 justify-center pt-6">
+          <div
+            v-if="languageBubbleVisible"
+            class="language-bubble-wrap pointer-events-auto absolute right-[calc(100%+14px)] top-1/2 z-30 w-[240px] -translate-y-1/2"
+          >
+            <div
+              ref="languageBubble"
+              class="language-bubble-card relative rounded-[24px] border-2 border-[#102a3a] bg-white px-5 py-4 text-center shadow-[6px_6px_0_rgba(16,42,58,0.16)]"
+            >
+              <button
+                type="button"
+                class="absolute right-3 top-2 text-xl leading-none text-[#102a3a]/45 transition hover:text-[#102a3a]"
+                :aria-label="t('aria.closeLanguage')"
+                @click.stop="closeLanguageBubble"
+              >
+                ×
+              </button>
+
+              <p class="text-[10px] font-bold tracking-[0.2em] text-[#67a9ca]">
+                {{ t('language.eyebrow') }}
+              </p>
+
+              <h3 class="mt-2 text-base font-bold tracking-[0.06em] text-[#102a3a]">
+                {{ selectedLanguage ? t('language.confirmTitle', { language: selectedLanguageLabel }) : t('language.title') }}
+              </h3>
+
+              <p
+                v-if="!selectedLanguage"
+                class="mt-1.5 text-xs leading-5 text-[#102a3a]/65"
+              >
+                {{ t('language.optionHint') }}
+              </p>
+
+              <p
+                v-else
+                class="mt-1.5 text-xs leading-5 text-[#102a3a]/65"
+              >
+                {{ t('language.confirmHint') }}
+              </p>
+
+              <div
+                v-if="!selectedLanguage"
+                class="mt-4 grid grid-cols-3 gap-2"
+              >
+                <button
+                  v-for="option in languageOptions"
+                  :key="option.code"
+                  type="button"
+                  class="rounded-full border-2 border-[#102a3a] bg-[#f5fbff] px-2 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#c8ebff]"
+                  @click.stop="chooseLanguage(option.code)"
+                >
+                  {{ option.name }}
+                </button>
+              </div>
+
+              <div
+                v-else
+                class="mt-4 grid grid-cols-2 gap-2"
+              >
+                <button
+                  type="button"
+                  class="rounded-full border-2 border-[#102a3a] bg-white px-3 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f5fbff]"
+                  @click.stop="resetLanguageChoice"
+                >
+                  {{ t('language.reselect') }}
+                </button>
+
+                <button
+                  type="button"
+                  class="rounded-full border-2 border-[#102a3a] bg-[#c8ebff] px-3 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#b8e4fb]"
+                  @click.stop="confirmLanguage"
+                >
+                  {{ t('language.confirm') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <img
+            v-if="!languageImageFailed"
+            ref="languageImage"
+            src="/images/lage.jpg"
+            :alt="t('language.imageAlt')"
+            class="block h-[142px] w-[160px] cursor-pointer select-none object-contain will-change-transform"
+            decoding="async"
+            loading="lazy"
+            @click="spinLanguageImage"
+            @error="handleLanguageImageError"
+          >
+
+          <button
+            v-else
+            ref="languageImage"
+            type="button"
+            class="flex h-[142px] w-[160px] cursor-pointer select-none flex-col items-center justify-center rounded-[28px] border-2 border-[#102a3a] bg-[#f5fbff] text-center shadow-[6px_6px_0_rgba(16,42,58,0.14)] transition will-change-transform hover:-translate-y-0.5 hover:bg-[#c8ebff]"
+            :aria-label="t('language.imageAlt')"
+            @click="spinLanguageImage"
+          >
+            <span class="text-[11px] font-black tracking-[0.22em] text-[#67a9ca]">LANGUAGE</span>
+            <span class="mt-2 text-[18px] font-bold tracking-[0.06em] text-[#102a3a]">语言切换</span>
+            <span class="mt-1 text-[11px] font-bold tracking-[0.12em] text-[#102a3a]/55">中文 / EN / 日</span>
+          </button>
+        </div>
+
+        <div class="mt-4 shrink-0 border-t border-[rgba(120,180,210,0.26)] pt-[18px]">
           <p class="text-[11px] tracking-[0.08em] text-[#102a3a]/60">
-            Tech Festival Project
+            {{ t('site.project') }}
           </p>
 
           <span class="mt-1.5 block font-serif text-xl text-[#102a3a]">
@@ -1046,7 +1649,7 @@ onBeforeUnmount(() => {
       </aside>
     </section>
 
-    <div class="home-cover-page">
+    <div v-if="longPageReady" class="home-cover-page">
       <section id="story" class="motion-section cover-panel">
         <div class="motion-section-inner">
           <StorySection />
@@ -1072,6 +1675,12 @@ onBeforeUnmount(() => {
       <section id="mascot-easteregg" class="motion-section cover-panel">
         <div class="motion-section-inner">
           <MascotGirlEasterEgg />
+        </div>
+      </section>
+
+      <section id="thanks-watching" class="motion-section cover-panel">
+        <div class="motion-section-inner">
+          <ThanksWatchingSection />
         </div>
       </section>
 
@@ -1101,12 +1710,23 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   margin-top: 100vh;
   background: #fff;
+  isolation: isolate;
 }
 
 .cover-panel {
   position: relative;
   z-index: 1;
+  margin: 0;
+  border: 0;
   background: #fff;
+  box-shadow: none;
+  outline: 0;
+}
+
+#news,
+#mascot-easteregg,
+#thanks-watching {
+  margin-top: -1px;
 }
 
 .hero-parallax,
@@ -1123,6 +1743,69 @@ onBeforeUnmount(() => {
   clip-path: inset(0 0 0 0);
 }
 
+.hero-visual-change-nav {
+  width: 100%;
+  margin-top: 28px;
+  padding-left: 2px;
+  color: #7b5b82;
+}
+
+.hero-visual-change-title {
+  margin-bottom: 14px;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #7b5b82;
+}
+
+.hero-visual-progress-line {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.hero-visual-progress-dot {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid #67c7f7;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.hero-visual-progress-dot::after {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #67c7f7;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.hero-visual-progress-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  margin-left: -1px;
+  overflow: hidden;
+  background: rgba(103, 199, 247, 0.38);
+}
+
+.hero-visual-progress-bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #67c7f7;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
 .boot-mask {
   pointer-events: auto;
 }
@@ -1136,6 +1819,33 @@ onBeforeUnmount(() => {
 .motion-section-inner {
   position: relative;
   will-change: transform;
+}
+
+#characters,
+#scenes {
+  background: transparent;
+}
+
+#news {
+  background: #fff;
+}
+
+#characters .motion-section-inner,
+#scenes .motion-section-inner {
+  transform: none !important;
+}
+
+.language-bubble-card::after {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-right: 2px solid #102a3a;
+  border-top: 2px solid #102a3a;
+  content: "";
+  transform: translateY(-50%) rotate(45deg);
 }
 
 .menu-toggle {
@@ -1362,6 +2072,26 @@ onBeforeUnmount(() => {
 
 .menu-panel-body :deep(a:hover) {
   transform: translateX(4px);
+}
+
+@media (max-width: 1023px) {
+  .language-bubble-wrap {
+    right: auto;
+    left: 0;
+    top: auto;
+    bottom: calc(100% + 14px);
+    transform: none;
+  }
+
+  .language-bubble-card::after {
+    right: 36px;
+    top: auto;
+    bottom: -10px;
+    border-bottom: 2px solid #102a3a;
+    border-right: 2px solid #102a3a;
+    border-top: 0;
+    transform: rotate(45deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

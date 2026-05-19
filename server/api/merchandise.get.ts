@@ -1,4 +1,10 @@
 let prisma: any = null;
+let cachedMerchandise: any[] | null = null;
+let cacheExpiresAt = 0;
+let inFlightMerchandise: Promise<any[]> | null = null;
+
+const MERCHANDISE_CACHE_MAX_AGE = 1000 * 60 * 10;
+const MERCHANDISE_QUERY_TIMEOUT = 900;
 
 const BASE_URL =
   "https://irkydgphndgopzicgqou.supabase.co/storage/v1/object/public/atri/commodity/";
@@ -140,19 +146,57 @@ async function getPrismaClient() {
 
 // ... 前面的 getPrismaClient 等代码保持不变 ...
 
-export default defineEventHandler(async () => {
+async function queryMerchandise() {
+  const prisma = await getPrismaClient();
+
+  return await prisma.merchandise.findMany({
+    orderBy: [
+      { sortOrder: "asc" },
+      { createdAt: "asc" },
+    ],
+  });
+}
+
+function withTimeout<T>(promise: Promise<T>, timeout: number) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error("Merchandise query timed out")), timeout);
+    }),
+  ]);
+}
+
+function refreshMerchandiseCache() {
+  if (!inFlightMerchandise) {
+    inFlightMerchandise = queryMerchandise()
+      .then((products) => {
+        cachedMerchandise = Array.isArray(products) && products.length ? products : fallbackMerchandise;
+        cacheExpiresAt = Date.now() + MERCHANDISE_CACHE_MAX_AGE;
+        return cachedMerchandise;
+      })
+      .catch((error) => {
+        console.error("数据库查询失败:", error);
+        return cachedMerchandise || fallbackMerchandise;
+      })
+      .finally(() => {
+        inFlightMerchandise = null;
+      });
+  }
+
+  return inFlightMerchandise;
+}
+
+export default defineEventHandler(async (event) => {
+  setHeader(event, "Cache-Control", "public, max-age=60, stale-while-revalidate=600");
+
+  if (cachedMerchandise && Date.now() < cacheExpiresAt) {
+    return cachedMerchandise;
+  }
+
   try {
-    const prisma = await getPrismaClient();
-    return await prisma.merchandise.findMany({
-      // 🚀 修改排序逻辑
-      orderBy: [
-        { sortOrder: "asc" }, // 首先按自定义序号排
-        { createdAt: "asc" }, // 序号相同时，按创建时间排
-      ],
-    });
+    return await withTimeout(refreshMerchandiseCache(), MERCHANDISE_QUERY_TIMEOUT);
   } catch (error) {
-    console.error("数据库查询失败:", error);
-    // 如果失败，返回 fallback 数据（建议也给 fallback 数据加上 sortOrder 属性）
-    return fallbackMerchandise;
+    console.warn("商品数据加载超时，先返回缓存或备用数据:", error);
+    return cachedMerchandise || fallbackMerchandise;
   }
 });
