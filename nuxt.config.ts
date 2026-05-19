@@ -1,13 +1,34 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "shadcn-nuxt", "@nuxtjs/supabase", "@vercel/analytics", "@vercel/speed-insights"],
+  devtools: { enabled: false },
+
+  modules: ["@nuxtjs/tailwindcss", "@nuxtjs/supabase", "@vercel/analytics", "@vercel/speed-insights"],
+
   app: {
     head: {
       title: "ATRI",
+      link: [
+        { rel: "icon", type: "image/png", href: "/favicon.png" },
+        { rel: "shortcut icon", type: "image/png", href: "/favicon.png" },
+        { rel: "apple-touch-icon", href: "/images/tb.png" },
+      ],
     },
   },
+
+  components: {
+    dirs: [
+      {
+        path: "~/components",
+        pathPrefix: false,
+      },
+    ],
+  },
+
+  typescript: {
+    shim: false,
+  },
+
   supabase: {
     redirect: false,
     types: false,
@@ -16,15 +37,14 @@ export default defineNuxtConfig({
       callback: "/confirm",
     },
   },
-  components: {
-    dirs: [
-      {
-        path: '~/components',
-        pathPrefix: false
-      }
-    ]
+
+  vite: {
+    optimizeDeps: {
+      include: [
+        'lenis',
+        'gsap',
+        'gsap/ScrollTrigger',
+      ],
+    },
   },
-  typescript: {
-    shim: false
-  }
 })

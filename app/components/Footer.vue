@@ -5,12 +5,12 @@
         <!-- 顶部导航 -->
         <nav class="footer-nav">
           <ul class="footer-nav-list">
-            <li v-for="item in navList" :key="item.name">
+            <li v-for="item in navList" :key="item.key">
               <NuxtLink
                 :to="item.link"
                 class="footer-nav-link"
               >
-                <span v-if="item.name === 'HOME'" class="footer-heart">♥</span>
+                <span v-if="item.key === 'home'" class="footer-heart">♥</span>
                 {{ item.name }}
               </NuxtLink>
             </li>
@@ -22,20 +22,21 @@
         <div class="footer-content">
           <div class="footer-column footer-column-left">
             <div class="footer-social">
-              <span class="footer-label">OFFICIAL</span>
+              <span class="footer-label">{{ t('footer.official') }}</span>
 
               <a
                 v-for="item in officialLinks"
                 :key="item.name"
                 :href="item.link"
                 class="footer-icon"
+                :aria-label="item.name"
               >
                 {{ item.icon }}
               </a>
             </div>
 
             <a href="#contact" class="footer-button">
-              <span>Business Inquiries</span>
+              <span>{{ t('footer.businessInquiries') }}</span>
               <span class="footer-button-arrow">→</span>
             </a>
           </div>
@@ -47,27 +48,28 @@
               </div>
 
               <div class="footer-logo-subtitle">
-                MY DEAR MOMENTS
+                {{ t('footer.logoSubtitle') }}
               </div>
             </NuxtLink>
           </div>
 
           <div class="footer-column footer-column-right">
             <div class="footer-social">
-              <span class="footer-label">SHARE</span>
+              <span class="footer-label">{{ t('footer.share') }}</span>
 
               <a
                 v-for="item in shareLinks"
                 :key="item.name"
                 :href="item.link"
                 class="footer-icon"
+                :aria-label="item.name"
               >
                 {{ item.icon }}
               </a>
             </div>
 
             <p class="footer-copy">
-              ©ATRI PROJECT / SAMPLE WEBSITE
+              {{ t('footer.copy') }}
             </p>
           </div>
         </div>
@@ -77,30 +79,158 @@
 </template>
 
 <script setup>
-const navList = [
-  { name: 'HOME', link: '/' },
-  { name: 'MOVIE', link: '#movie' },
-  { name: 'NEWS', link: '/news' },
-  { name: 'STAFF&CAST', link: '#staff' },
-  { name: 'INTRODUCTION', link: '#introduction' },
-  { name: 'CHARACTER', link: '/characters' },
-  { name: 'BOOKS', link: '#books' },
-  { name: 'STORY', link: '/story' },
-  { name: 'ON AIR', link: '#onair' },
-  { name: 'MUSIC', link: '#music' },
-  { name: 'PRODUCTS', link: '/merchandise' },
-  { name: 'SPECIAL', link: '#special' },
+import { computed, inject, onBeforeUnmount, onMounted, ref } from 'vue'
+
+const DEFAULT_LANGUAGE = 'zh'
+const LANGUAGE_STORAGE_KEY = 'atriSiteLanguage'
+
+const injectedI18n = inject('atriI18n', null)
+const localLanguage = ref(DEFAULT_LANGUAGE)
+
+const navBaseList = [
+  { key: 'home', link: '/' },
+  { key: 'movie', link: '#movie' },
+  { key: 'news', link: '/news' },
+  { key: 'staffCast', link: '#staff' },
+  { key: 'introduction', link: '#introduction' },
+  { key: 'character', link: '/characters' },
+  { key: 'books', link: '#books' },
+  { key: 'story', link: '/story' },
+  { key: 'onAir', link: '#onair' },
+  { key: 'music', link: '#music' },
+  { key: 'products', link: '/merchandise' },
+  { key: 'special', link: '#special' }
 ]
+
+const footerTranslations = {
+  zh: {
+    'footer.nav.home': '首页',
+    'footer.nav.movie': '影片',
+    'footer.nav.news': '新闻',
+    'footer.nav.staffCast': '制作&声优',
+    'footer.nav.introduction': '介绍',
+    'footer.nav.character': '角色',
+    'footer.nav.books': '书籍',
+    'footer.nav.story': '故事',
+    'footer.nav.onAir': '播出',
+    'footer.nav.music': '音乐',
+    'footer.nav.products': '商品',
+    'footer.nav.special': '特别',
+
+    'footer.official': '官方',
+    'footer.share': '分享',
+    'footer.businessInquiries': '商务咨询',
+    'footer.logoSubtitle': 'MY DEAR MOMENTS',
+    'footer.copy': '©ATRI PROJECT / SAMPLE WEBSITE'
+  },
+
+  en: {
+    'footer.nav.home': 'HOME',
+    'footer.nav.movie': 'MOVIE',
+    'footer.nav.news': 'NEWS',
+    'footer.nav.staffCast': 'STAFF&CAST',
+    'footer.nav.introduction': 'INTRODUCTION',
+    'footer.nav.character': 'CHARACTER',
+    'footer.nav.books': 'BOOKS',
+    'footer.nav.story': 'STORY',
+    'footer.nav.onAir': 'ON AIR',
+    'footer.nav.music': 'MUSIC',
+    'footer.nav.products': 'PRODUCTS',
+    'footer.nav.special': 'SPECIAL',
+
+    'footer.official': 'OFFICIAL',
+    'footer.share': 'SHARE',
+    'footer.businessInquiries': 'Business Inquiries',
+    'footer.logoSubtitle': 'MY DEAR MOMENTS',
+    'footer.copy': '©ATRI PROJECT / SAMPLE WEBSITE'
+  },
+
+  ja: {
+    'footer.nav.home': 'ホーム',
+    'footer.nav.movie': 'ムービー',
+    'footer.nav.news': 'ニュース',
+    'footer.nav.staffCast': 'スタッフ&キャスト',
+    'footer.nav.introduction': 'イントロダクション',
+    'footer.nav.character': 'キャラクター',
+    'footer.nav.books': 'ブックス',
+    'footer.nav.story': 'ストーリー',
+    'footer.nav.onAir': 'オンエア',
+    'footer.nav.music': 'ミュージック',
+    'footer.nav.products': '商品',
+    'footer.nav.special': 'スペシャル',
+
+    'footer.official': '公式',
+    'footer.share': '共有',
+    'footer.businessInquiries': 'お問い合わせ',
+    'footer.logoSubtitle': 'MY DEAR MOMENTS',
+    'footer.copy': '©ATRI PROJECT / SAMPLE WEBSITE'
+  }
+}
 
 const officialLinks = [
   { name: 'X', icon: '𝕏', link: '#' },
-  { name: 'TikTok', icon: '♪', link: '#' },
+  { name: 'TikTok', icon: '♪', link: '#' }
 ]
 
 const shareLinks = [
   { name: 'X', icon: '𝕏', link: '#' },
-  { name: 'LINE', icon: '●', link: '#' },
+  { name: 'LINE', icon: '●', link: '#' }
 ]
+
+const currentLanguage = computed(() => {
+  const injectedLanguage = injectedI18n?.currentLanguage?.value
+
+  return normalizeLanguage(injectedLanguage || localLanguage.value)
+})
+
+const navList = computed(() =>
+  navBaseList.map((item) => ({
+    ...item,
+    name: t(`footer.nav.${item.key}`)
+  }))
+)
+
+function normalizeLanguage(language) {
+  return ['zh', 'en', 'ja'].includes(language) ? language : DEFAULT_LANGUAGE
+}
+
+function t(key) {
+  const language = currentLanguage.value
+
+  return (
+    footerTranslations[language]?.[key] ||
+    footerTranslations[DEFAULT_LANGUAGE]?.[key] ||
+    key
+  )
+}
+
+function getSavedLanguage() {
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE
+
+  try {
+    return normalizeLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY) || DEFAULT_LANGUAGE)
+  } catch {
+    return DEFAULT_LANGUAGE
+  }
+}
+
+function handleLanguageChange(event) {
+  localLanguage.value = normalizeLanguage(event.detail?.language)
+}
+
+onMounted(() => {
+  localLanguage.value = getSavedLanguage()
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('atri-language-change', handleLanguageChange)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('atri-language-change', handleLanguageChange)
+  }
+})
 </script>
 
 <style scoped>
@@ -108,7 +238,7 @@ const shareLinks = [
   position: relative;
   z-index: 2;
   width: 100%;
-  margin-top: 560px;
+  margin-top: 160px;
   overflow: hidden;
   color: #10213a;
   background: #ffffff;
@@ -117,17 +247,33 @@ const shareLinks = [
 .footer-box {
   position: relative;
   width: 100%;
-  min-height: 360px;
+  min-height: 560px;
+  overflow: hidden;
   background:
     linear-gradient(180deg, #eef9ff 0%, #d7efff 48%, #acdfff 100%);
-  border-top: 1px solid rgba(110, 175, 220, 0.32);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* 顶部白色弧形切口：只保留形状，不加细线 */
+.footer-box::before {
+  position: absolute;
+  left: 50%;
+  top: -178px;
+  z-index: 0;
+  width: 150%;
+  height: 260px;
+  border-radius: 0 0 50% 50%;
+  background: #ffffff;
+  transform: translateX(-50%);
+  content: "";
+  pointer-events: none;
 }
 
 .footer-inner {
+  position: relative;
+  z-index: 1;
   width: min(1080px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 54px 0 58px;
+  padding: 126px 0 100px;
 }
 
 .footer-nav {
@@ -173,7 +319,7 @@ const shareLinks = [
 .footer-divider {
   width: min(820px, 100%);
   height: 1px;
-  margin: 42px auto;
+  margin: 52px auto;
   border-top: 1px dotted rgba(91, 139, 170, 0.56);
 }
 
@@ -313,17 +459,23 @@ const shareLinks = [
 
 @media (max-width: 900px) {
   .footer-root {
-    margin-top: 420px;
+    margin-top: 120px;
+  }
+
+  .footer-box::before {
+    top: -150px;
+    width: 170%;
+    height: 230px;
   }
 
   .footer-inner {
     width: min(100% - 40px, 760px);
-    padding: 50px 0 54px;
+    padding: 118px 0 90px;
   }
 
   .footer-content {
     grid-template-columns: 1fr;
-    gap: 38px;
+    gap: 48px;
   }
 
   .footer-column-left,
@@ -338,11 +490,17 @@ const shareLinks = [
 
 @media (max-width: 768px) {
   .footer-root {
-    margin-top: 320px;
+    margin-top: 90px;
   }
 
   .footer-box {
-    min-height: 420px;
+    min-height: 560px;
+  }
+
+  .footer-box::before {
+    top: -132px;
+    width: 190%;
+    height: 210px;
   }
 
   .footer-nav-list {
@@ -365,12 +523,18 @@ const shareLinks = [
 
 @media (max-width: 520px) {
   .footer-root {
-    margin-top: 240px;
+    margin-top: 60px;
+  }
+
+  .footer-box::before {
+    top: -112px;
+    width: 230%;
+    height: 188px;
   }
 
   .footer-inner {
     width: min(100% - 32px, 460px);
-    padding: 44px 0 48px;
+    padding: 106px 0 78px;
   }
 
   .footer-nav-list {
@@ -383,7 +547,7 @@ const shareLinks = [
   }
 
   .footer-divider {
-    margin: 34px auto;
+    margin: 40px auto;
   }
 
   .footer-button {
