@@ -233,7 +233,7 @@ onMounted(() => {
   <nav class="flex flex-col gap-2">
     <NuxtLink
       v-for="(item, index) in items"
-      :key="item.label"
+      :key="item.to"
       :to="resolveNavTo(item)"
       class="sidebar-link group relative flex items-center gap-3 rounded-[14px] px-2.5 py-[11px] text-[#102a3a] transition duration-300 hover:-translate-x-1.5 hover:bg-[#a5e1fa]/20"
       @click="handleNavClick(item, $event)"
@@ -250,10 +250,6 @@ onMounted(() => {
         <strong class="block text-sm font-bold tracking-[0.08em]">
           {{ item.label }}
         </strong>
-
-        <small class="mt-0.5 block text-[11px] text-[#102a3a]/55">
-          {{ item.text }}
-        </small>
       </span>
     </NuxtLink>
   </nav>

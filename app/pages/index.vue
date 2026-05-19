@@ -54,7 +54,10 @@ const translations = {
     'language.confirmHint': '点击确定后，整个网站语言会切换过去',
     'language.reselect': '重选',
     'language.confirm': '确定',
+    'language.tooltip': '这里是语言切换功能',
     'language.imageAlt': '语言切换入口',
+    'nav.home': '首页',
+    'nav.products': '周边商品',
     'nav.story': '故事',
     'nav.characters': '角色',
     'nav.scenes': '场景',
@@ -76,7 +79,10 @@ const translations = {
     'language.confirmHint': 'After confirming, the whole site language will change.',
     'language.reselect': 'Back',
     'language.confirm': 'Confirm',
+    'language.tooltip': 'Switch language here',
     'language.imageAlt': 'Language switch entry',
+    'nav.home': 'Home',
+    'nav.products': 'Merchandise',
     'nav.story': 'Story',
     'nav.characters': 'Characters',
     'nav.scenes': 'Scenes',
@@ -98,7 +104,10 @@ const translations = {
     'language.confirmHint': '確定すると、サイト全体の言語が切り替わります。',
     'language.reselect': '選び直す',
     'language.confirm': '確定',
+    'language.tooltip': 'ここで言語を切り替えます',
     'language.imageAlt': '言語切り替え入口',
+    'nav.home': 'ホーム',
+    'nav.products': 'グッズ',
     'nav.story': 'ストーリー',
     'nav.characters': 'キャラクター',
     'nav.scenes': 'シーン',
@@ -129,7 +138,6 @@ const heroTitleImage = ref(null)
 const nextSlideImage = ref(null)
 const heroProgressBar = ref(null)
 const languageImage = ref(null)
-const languageBubble = ref(null)
 const languageImageFailed = ref(false)
 const languageSpinLocked = ref(false)
 const thumbButtons = ref([])
@@ -142,11 +150,7 @@ const isSwitching = ref(false)
 const menuOpen = ref(false)
 const isMenuIconVisible = ref(false)
 
-const languageBubbleVisible = ref(false)
 const currentLanguage = ref(DEFAULT_LANGUAGE)
-const selectedLanguage = ref('')
-
-const selectedLanguageLabel = computed(() => languageNameMap[selectedLanguage.value] || '')
 
 function normalizeLanguage(language) {
   return languageOptions.some((option) => option.code === language)
@@ -218,7 +222,7 @@ function initLanguage() {
 }
 
 function getNavigationLabelKey(item) {
-  const rawValues = [
+  const rawList = [
     item?.href,
     item?.to,
     item?.path,
@@ -229,8 +233,27 @@ function getNavigationLabelKey(item) {
     item?.text
   ]
     .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
+    .map((value) => String(value))
+
+  const rawValues = rawList.join(' ').toLowerCase()
+  const pathValues = rawList.map((value) => value.trim().toLowerCase())
+
+  if (
+    pathValues.includes('/') ||
+    rawValues.includes('home') ||
+    rawValues.includes('首页') ||
+    rawValues.includes('ホーム')
+  ) return 'nav.home'
+
+  if (
+    rawValues.includes('products') ||
+    rawValues.includes('goods') ||
+    rawValues.includes('merch') ||
+    rawValues.includes('shop') ||
+    rawValues.includes('周边') ||
+    rawValues.includes('商品') ||
+    rawValues.includes('グッズ')
+  ) return 'nav.products'
 
   if (rawValues.includes('characters')) return 'nav.characters'
   if (rawValues.includes('scenes')) return 'nav.scenes'
@@ -534,85 +557,27 @@ function restartHeroProgress() {
   })
 }
 
-function openLanguageBubble() {
-  languageBubbleVisible.value = true
-
-  nextTick(() => {
-    if (!languageBubble.value) return
-
-    gsap.killTweensOf(languageBubble.value)
-
-    gsap.fromTo(
-      languageBubble.value,
-      {
-        autoAlpha: 0,
-        x: 18,
-        scale: 0.86,
-        rotation: -2
-      },
-      {
-        autoAlpha: 1,
-        x: 0,
-        scale: 1,
-        rotation: 0,
-        duration: 0.38,
-        ease: 'back.out(1.7)'
-      }
-    )
-  })
-}
-
-function closeLanguageBubble() {
-  if (!languageBubble.value) {
-    languageBubbleVisible.value = false
-    selectedLanguage.value = ''
-    return
-  }
-
-  gsap.killTweensOf(languageBubble.value)
-
-  gsap.to(languageBubble.value, {
-    autoAlpha: 0,
-    x: 12,
-    scale: 0.92,
-    duration: 0.2,
-    ease: 'power2.in',
-    onComplete: () => {
-      languageBubbleVisible.value = false
-      selectedLanguage.value = ''
-    }
-  })
-}
-
-function chooseLanguage(language) {
-  selectedLanguage.value = normalizeLanguage(language)
-}
-
-function confirmLanguage() {
-  if (selectedLanguage.value) {
-    setLanguage(selectedLanguage.value)
-  }
-
-  closeLanguageBubble()
-}
-
-function resetLanguageChoice() {
-  selectedLanguage.value = ''
-}
-
 function handleLanguageImageError() {
   languageImageFailed.value = true
+}
+
+function cycleLanguage() {
+  const currentIndex = languageOptions.findIndex((opt) => opt.code === currentLanguage.value)
+  const nextIndex = (currentIndex + 1) % languageOptions.length
+
+  setLanguage(languageOptions[nextIndex].code)
+}
+
+function switchToLanguage(language) {
+  setLanguage(language)
 }
 
 function spinLanguageImage() {
   if (!languageImage.value || languageSpinLocked.value) return
 
   languageSpinLocked.value = true
-  languageBubbleVisible.value = false
-  selectedLanguage.value = ''
 
   gsap.killTweensOf(languageImage.value)
-  gsap.killTweensOf(languageBubble.value)
   gsap.set(languageImage.value, {
     rotation: 0,
     transformOrigin: '50% 50%'
@@ -626,7 +591,7 @@ function spinLanguageImage() {
     onComplete: () => {
       gsap.set(languageImage.value, { rotation: 0 })
       languageSpinLocked.value = false
-      openLanguageBubble()
+      cycleLanguage()
     }
   })
 }
@@ -1325,7 +1290,6 @@ onBeforeUnmount(() => {
   heroProgressTween?.kill()
   gsap.killTweensOf(introClickCursor.value)
   gsap.killTweensOf(languageImage.value)
-  gsap.killTweensOf(languageBubble.value)
 })
 </script>
 
@@ -1512,6 +1476,26 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
+        <div class="language-bar shrink-0 mb-5 pb-4 border-b border-[rgba(120,180,210,0.22)]">
+          <div class="language-bar-inner flex items-center justify-center text-sm font-bold tracking-[0.06em] text-[#102a3a]">
+            <template v-for="(option, i) in languageOptions" :key="option.code">
+              <button
+                type="button"
+                class="language-option px-1 py-0.5 transition-colors hover:text-[#67a9ca]"
+                :class="currentLanguage === option.code ? 'text-[#3c96d2] underline decoration-[#67c7f7] decoration-2 underline-offset-[5px]' : 'text-[#102a3a]/70'"
+                @click="switchToLanguage(option.code)"
+              >
+                {{ option.name }}
+              </button>
+              <span
+                v-if="i < languageOptions.length - 1"
+                class="mx-0.5 text-[#102a3a]/35 select-none"
+                aria-hidden="true"
+              >/</span>
+            </template>
+          </div>
+        </div>
+
         <div class="shrink-0">
           <HomeSidebar :items="translatedHomeNavItems" />
         </div>
@@ -1533,90 +1517,13 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="language-picker relative z-10 mt-auto flex shrink-0 justify-center pt-6">
-          <div
-            v-if="languageBubbleVisible"
-            class="language-bubble-wrap pointer-events-auto absolute right-[calc(100%+14px)] top-1/2 z-30 w-[240px] -translate-y-1/2"
-          >
-            <div
-              ref="languageBubble"
-              class="language-bubble-card relative rounded-[24px] border-2 border-[#102a3a] bg-white px-5 py-4 text-center shadow-[6px_6px_0_rgba(16,42,58,0.16)]"
-            >
-              <button
-                type="button"
-                class="absolute right-3 top-2 text-xl leading-none text-[#102a3a]/45 transition hover:text-[#102a3a]"
-                :aria-label="t('aria.closeLanguage')"
-                @click.stop="closeLanguageBubble"
-              >
-                ×
-              </button>
-
-              <p class="text-[10px] font-bold tracking-[0.2em] text-[#67a9ca]">
-                {{ t('language.eyebrow') }}
-              </p>
-
-              <h3 class="mt-2 text-base font-bold tracking-[0.06em] text-[#102a3a]">
-                {{ selectedLanguage ? t('language.confirmTitle', { language: selectedLanguageLabel }) : t('language.title') }}
-              </h3>
-
-              <p
-                v-if="!selectedLanguage"
-                class="mt-1.5 text-xs leading-5 text-[#102a3a]/65"
-              >
-                {{ t('language.optionHint') }}
-              </p>
-
-              <p
-                v-else
-                class="mt-1.5 text-xs leading-5 text-[#102a3a]/65"
-              >
-                {{ t('language.confirmHint') }}
-              </p>
-
-              <div
-                v-if="!selectedLanguage"
-                class="mt-4 grid grid-cols-3 gap-2"
-              >
-                <button
-                  v-for="option in languageOptions"
-                  :key="option.code"
-                  type="button"
-                  class="rounded-full border-2 border-[#102a3a] bg-[#f5fbff] px-2 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#c8ebff]"
-                  @click.stop="chooseLanguage(option.code)"
-                >
-                  {{ option.name }}
-                </button>
-              </div>
-
-              <div
-                v-else
-                class="mt-4 grid grid-cols-2 gap-2"
-              >
-                <button
-                  type="button"
-                  class="rounded-full border-2 border-[#102a3a] bg-white px-3 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f5fbff]"
-                  @click.stop="resetLanguageChoice"
-                >
-                  {{ t('language.reselect') }}
-                </button>
-
-                <button
-                  type="button"
-                  class="rounded-full border-2 border-[#102a3a] bg-[#c8ebff] px-3 py-1.5 text-xs font-bold text-[#102a3a] shadow-[2px_2px_0_rgba(16,42,58,0.16)] transition hover:-translate-y-0.5 hover:bg-[#b8e4fb]"
-                  @click.stop="confirmLanguage"
-                >
-                  {{ t('language.confirm') }}
-                </button>
-              </div>
-            </div>
-          </div>
-
+        <div class="language-picker relative z-10 mt-auto flex shrink-0 flex-col items-center justify-center pt-4">
           <img
             v-if="!languageImageFailed"
             ref="languageImage"
             src="/images/lage.jpg"
             :alt="t('language.imageAlt')"
-            class="block h-[142px] w-[160px] cursor-pointer select-none object-contain will-change-transform"
+            class="block h-[110px] w-[124px] cursor-pointer select-none object-contain will-change-transform"
             decoding="async"
             loading="lazy"
             @click="spinLanguageImage"
@@ -1627,7 +1534,7 @@ onBeforeUnmount(() => {
             v-else
             ref="languageImage"
             type="button"
-            class="flex h-[142px] w-[160px] cursor-pointer select-none flex-col items-center justify-center rounded-[28px] border-2 border-[#102a3a] bg-[#f5fbff] text-center shadow-[6px_6px_0_rgba(16,42,58,0.14)] transition will-change-transform hover:-translate-y-0.5 hover:bg-[#c8ebff]"
+            class="flex h-[110px] w-[124px] cursor-pointer select-none flex-col items-center justify-center rounded-[24px] border-2 border-[#102a3a] bg-[#f5fbff] text-center shadow-[6px_6px_0_rgba(16,42,58,0.14)] transition will-change-transform hover:-translate-y-0.5 hover:bg-[#c8ebff]"
             :aria-label="t('language.imageAlt')"
             @click="spinLanguageImage"
           >
@@ -1833,19 +1740,6 @@ onBeforeUnmount(() => {
 #characters .motion-section-inner,
 #scenes .motion-section-inner {
   transform: none !important;
-}
-
-.language-bubble-card::after {
-  position: absolute;
-  right: -10px;
-  top: 50%;
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-right: 2px solid #102a3a;
-  border-top: 2px solid #102a3a;
-  content: "";
-  transform: translateY(-50%) rotate(45deg);
 }
 
 .menu-toggle {
@@ -2072,26 +1966,6 @@ onBeforeUnmount(() => {
 
 .menu-panel-body :deep(a:hover) {
   transform: translateX(4px);
-}
-
-@media (max-width: 1023px) {
-  .language-bubble-wrap {
-    right: auto;
-    left: 0;
-    top: auto;
-    bottom: calc(100% + 14px);
-    transform: none;
-  }
-
-  .language-bubble-card::after {
-    right: 36px;
-    top: auto;
-    bottom: -10px;
-    border-bottom: 2px solid #102a3a;
-    border-right: 2px solid #102a3a;
-    border-top: 0;
-    transform: rotate(45deg);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

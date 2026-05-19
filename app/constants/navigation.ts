@@ -5,11 +5,11 @@ export type HomeNavItem = {
 }
 
 export const homeNavItems: HomeNavItem[] = [
-  { label: 'HOME', text: 'Blue Memories', to: '/' },
+  { label: '首页', text: '', to: '/' },
   { label: 'STORY', text: 'Story Gallery', to: '/#story' },
   { label: 'CHARACTER', text: 'Characters', to: '/#characters' },
   { label: 'LOCATION', text: 'Scene Gallery', to: '/#scenes' },
   { label: 'NEWS', text: 'News', to: '/#news' },
   { label: 'THANKS', text: 'Thanks Watching', to: '/#thanks-watching' },
-  { label: 'GOODS', text: 'Merchandise', to: '/merchandise' }
+  { label: '周边商品', text: '官方周边', to: '/merchandise' }
 ]

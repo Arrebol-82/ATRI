@@ -7,7 +7,6 @@ export default defineNuxtConfig({
     "@nuxtjs/tailwindcss",
     "@nuxtjs/supabase",
     "@nuxtjs/color-mode",
-    "shadcn-nuxt",
     "@vercel/analytics",
     "@vercel/speed-insights",
   ],

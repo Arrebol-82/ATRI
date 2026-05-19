@@ -2,7 +2,7 @@
   <footer class="footer-root">
     <div class="footer-box">
       <div class="footer-inner">
-        <!-- 顶部导航 -->
+        <!-- 顶部导航：已改成和首页导航栏一致 -->
         <nav class="footer-nav">
           <ul class="footer-nav-list">
             <li v-for="item in navList" :key="item.key">
@@ -87,35 +87,32 @@ const LANGUAGE_STORAGE_KEY = 'atriSiteLanguage'
 const injectedI18n = inject('atriI18n', null)
 const localLanguage = ref(DEFAULT_LANGUAGE)
 
+/**
+ * 底部黑色导航文字
+ * 已改成和首页导航栏一致：
+ * 首页 / 周边商品 / 故事 / 角色 / 场景 / 新闻 / 彩蛋 / 结尾
+ */
 const navBaseList = [
   { key: 'home', link: '/' },
-  { key: 'movie', link: '#movie' },
-  { key: 'news', link: '/news' },
-  { key: 'staffCast', link: '#staff' },
-  { key: 'introduction', link: '#introduction' },
-  { key: 'character', link: '/characters' },
-  { key: 'books', link: '#books' },
-  { key: 'story', link: '/story' },
-  { key: 'onAir', link: '#onair' },
-  { key: 'music', link: '#music' },
-  { key: 'products', link: '/merchandise' },
-  { key: 'special', link: '#special' }
+  { key: 'products', link: '/products' },
+  { key: 'story', link: '#story' },
+  { key: 'characters', link: '#characters' },
+  { key: 'scenes', link: '#scenes' },
+  { key: 'news', link: '#news' },
+  { key: 'mascot', link: '#mascot-easteregg' },
+  { key: 'thanks', link: '#thanks-watching' }
 ]
 
 const footerTranslations = {
   zh: {
     'footer.nav.home': '首页',
-    'footer.nav.movie': '影片',
-    'footer.nav.news': '新闻',
-    'footer.nav.staffCast': '制作&声优',
-    'footer.nav.introduction': '介绍',
-    'footer.nav.character': '角色',
-    'footer.nav.books': '书籍',
+    'footer.nav.products': '周边商品',
     'footer.nav.story': '故事',
-    'footer.nav.onAir': '播出',
-    'footer.nav.music': '音乐',
-    'footer.nav.products': '商品',
-    'footer.nav.special': '特别',
+    'footer.nav.characters': '角色',
+    'footer.nav.scenes': '场景',
+    'footer.nav.news': '新闻',
+    'footer.nav.mascot': '彩蛋',
+    'footer.nav.thanks': '结尾',
 
     'footer.official': '官方',
     'footer.share': '分享',
@@ -125,21 +122,17 @@ const footerTranslations = {
   },
 
   en: {
-    'footer.nav.home': 'HOME',
-    'footer.nav.movie': 'MOVIE',
-    'footer.nav.news': 'NEWS',
-    'footer.nav.staffCast': 'STAFF&CAST',
-    'footer.nav.introduction': 'INTRODUCTION',
-    'footer.nav.character': 'CHARACTER',
-    'footer.nav.books': 'BOOKS',
-    'footer.nav.story': 'STORY',
-    'footer.nav.onAir': 'ON AIR',
-    'footer.nav.music': 'MUSIC',
-    'footer.nav.products': 'PRODUCTS',
-    'footer.nav.special': 'SPECIAL',
+    'footer.nav.home': 'Home',
+    'footer.nav.products': 'Merchandise',
+    'footer.nav.story': 'Story',
+    'footer.nav.characters': 'Characters',
+    'footer.nav.scenes': 'Scenes',
+    'footer.nav.news': 'News',
+    'footer.nav.mascot': 'Easter Egg',
+    'footer.nav.thanks': 'Thanks',
 
-    'footer.official': 'OFFICIAL',
-    'footer.share': 'SHARE',
+    'footer.official': 'Official',
+    'footer.share': 'Share',
     'footer.businessInquiries': 'Business Inquiries',
     'footer.logoSubtitle': 'MY DEAR MOMENTS',
     'footer.copy': '©ATRI PROJECT / SAMPLE WEBSITE'
@@ -147,17 +140,13 @@ const footerTranslations = {
 
   ja: {
     'footer.nav.home': 'ホーム',
-    'footer.nav.movie': 'ムービー',
-    'footer.nav.news': 'ニュース',
-    'footer.nav.staffCast': 'スタッフ&キャスト',
-    'footer.nav.introduction': 'イントロダクション',
-    'footer.nav.character': 'キャラクター',
-    'footer.nav.books': 'ブックス',
+    'footer.nav.products': 'グッズ',
     'footer.nav.story': 'ストーリー',
-    'footer.nav.onAir': 'オンエア',
-    'footer.nav.music': 'ミュージック',
-    'footer.nav.products': '商品',
-    'footer.nav.special': 'スペシャル',
+    'footer.nav.characters': 'キャラクター',
+    'footer.nav.scenes': 'シーン',
+    'footer.nav.news': 'ニュース',
+    'footer.nav.mascot': 'イースターエッグ',
+    'footer.nav.thanks': 'エンディング',
 
     'footer.official': '公式',
     'footer.share': '共有',

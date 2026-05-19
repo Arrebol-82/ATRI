@@ -337,6 +337,7 @@ const sweepOpacity = computed(() => {
 
 const creditsParallaxStyle = computed(() => {
   return {
+    backgroundImage: "url('/images/aaa.jpg')",
     transform: `translate3d(${parallaxX.value}px, ${parallaxY.value}px, 0) scale(1.08)`
   }
 })
@@ -1023,7 +1024,9 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: -4%;
   z-index: 0;
-  background: url('/images/aaa.jpg') center / cover no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   transform: translate3d(0, 0, 0) scale(1.08);
   transform-origin: center center;
   will-change: transform;
