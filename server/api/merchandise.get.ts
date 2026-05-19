@@ -7,7 +7,7 @@ const MERCHANDISE_CACHE_MAX_AGE = 1000 * 60 * 10;
 const MERCHANDISE_QUERY_TIMEOUT = 900;
 
 const BASE_URL =
-  "https://irkydgphndgopzicgqou.supabase.co/storage/v1/object/public/atri/";
+  "https://irkydgphndgopzicgqou.supabase.co/storage/v1/object/public/atri/commodity/";
 
 const fallbackMerchandise = [
   {

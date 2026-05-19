@@ -1,19 +1,86 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { computed, nextTick, ref, onMounted, onBeforeUnmount, onUnmounted, watch } from "vue";
+import * as echarts from "echarts";
 import type { ECharts } from "echarts/core";
-import { gsap } from "gsap";
+import gsap from "gsap";
 
 definePageMeta({
   layout: "admin",
   middleware: "auth",
 });
 
+const dashboardPageRef = ref<HTMLElement | null>(null);
 const barChartRef = ref<HTMLElement | null>(null);
 const pieChartRef = ref<HTMLElement | null>(null);
 const isDark = useState("admin-dark-mode", () => false);
+const { data: dashboardData } = await useFetch("/api/admin/dashboard", {
+  default: () => ({
+    metrics: {
+      revenue: 0,
+      visits: 0,
+      orders: 0,
+      returns: 0,
+    },
+    popularProducts: [],
+    salesProducts: [],
+    slowProducts: [],
+    categoryStats: [],
+  }),
+});
+
+const numberFormatter = new Intl.NumberFormat("ja-JP");
+const dashboardMetrics = computed(() => dashboardData.value?.metrics ?? {});
+const dashboardMetricDisplay = computed(() => ({
+  revenue: `¥${numberFormatter.format(Number(dashboardMetrics.value.revenue) || 0)}`,
+  visits: numberFormatter.format(Number(dashboardMetrics.value.visits) || 0),
+  orders: numberFormatter.format(Number(dashboardMetrics.value.orders) || 0),
+  returns: numberFormatter.format(Number(dashboardMetrics.value.returns) || 0),
+}));
+
+const categoryColors = ["#ff8c00", "#0088fe", "#00c49f", "#ffbb28"];
+const categoryDistribution = computed(() => {
+  const categoryStats = dashboardData.value?.categoryStats ?? [];
+
+  return categoryStats.slice(0, 4).map((item: any, index: number) => ({
+    category: item.category,
+    count: Number(item.count) || 0,
+    percentage: Number(item.percentage) || 0,
+    color: categoryColors[index] ?? "#5b4eff",
+  }));
+});
+const categoryChartData = computed(() =>
+  categoryDistribution.value.map((item) => ({
+    value: item.percentage,
+    name: item.category,
+    itemStyle: { color: item.color },
+  })),
+);
+const productSalesChartData = computed(() => {
+  const salesProducts = dashboardData.value?.salesProducts ?? [];
+
+  return salesProducts.map((product: any) => ({
+    name: product.name,
+    soldQuantity: Number(product.soldQuantity) || 0,
+  }));
+});
 
 let barChart: ECharts | null = null;
 let pieChart: ECharts | null = null;
+
+function updateBarChartData() {
+  barChart?.setOption({
+    xAxis: {
+      data: Array.from({ length: 12 }, (_, index) => String(index + 1)),
+    },
+    series: [
+      {
+        data: productSalesChartData.value
+          .slice(0, 12)
+          .map((item) => item.soldQuantity),
+      },
+    ],
+  });
+}
 
 function updateChartsTheme(nextIsDark: boolean) {
   const labelColor = nextIsDark ? "#a7b0c2" : "#9ca3af";
@@ -34,18 +101,56 @@ function toggleTheme() {
   updateChartsTheme(nextIsDark);
 }
 
-const inventoryData = [
+const legacyInventoryData = [
   { name: "角色立牌", percent: 85, color: "bg-[#5b4eff]" },
   { name: "主题徽章", percent: 60, color: "bg-[#5b4eff]" },
   { name: "纪念挂件", percent: 20, color: "bg-[#5b4eff]" },
   { name: "设定画册", percent: 45, color: "bg-[#5b4eff]" },
 ];
 
-const bestSelling = [
+const inventoryData = computed(() => {
+  const popularProducts = dashboardData.value?.popularProducts ?? [];
+  const maxStock = Math.max(
+    ...popularProducts.map((product: any) => Number(product.stock) || 0),
+    1,
+  );
+
+  return popularProducts.map((product: any) => {
+    const stock = Number(product.stock) || 0;
+
+    return {
+      name: product.name,
+      stock,
+      percent: Math.max(4, Math.round((stock / maxStock) * 100)),
+      color: stock <= 10 ? "bg-[#ef4444]" : "bg-[#5b4eff]",
+    };
+  });
+});
+
+const legacyBestSelling = [
   { name: "ATRI 亚克力立牌", percent: 85 },
   { name: "蓝色记忆徽章组", percent: 60 },
   { name: "主题透明卡", percent: 20 },
 ];
+
+const bestSelling = computed(() => {
+  const popularProducts = dashboardData.value?.popularProducts ?? [];
+  const topProducts = popularProducts.slice(0, 3);
+  const maxSoldQuantity = Math.max(
+    ...topProducts.map((product: any) => Number(product.soldQuantity) || 0),
+    1,
+  );
+
+  return topProducts.map((product: any) => {
+    const soldQuantity = Number(product.soldQuantity) || 0;
+
+    return {
+      name: product.name,
+      soldQuantity,
+      percent: Math.max(4, Math.round((soldQuantity / maxSoldQuantity) * 100)),
+    };
+  });
+});
 
 const worstSelling = [
   { name: "限定钥匙扣", percent: 15 },
@@ -53,52 +158,108 @@ const worstSelling = [
   { name: "收藏贴纸包", percent: 5 },
 ];
 
+const slowSelling = computed(() => {
+  const slowProducts = dashboardData.value?.slowProducts ?? [];
+  const maxSoldQuantity = Math.max(
+    ...slowProducts.map((product: any) => Number(product.soldQuantity) || 0),
+    1,
+  );
+
+  return slowProducts.map((product: any) => {
+    const soldQuantity = Number(product.soldQuantity) || 0;
+
+    return {
+      name: product.name,
+      soldQuantity,
+      percent: Math.max(4, Math.round((soldQuantity / maxSoldQuantity) * 100)),
+    };
+  });
+});
+
 onMounted(async () => {
-  gsap.from(".stagger-card", {
-    y: 40,
-    opacity: 0,
-    duration: 0.8,
-    stagger: 0.1,
-    ease: "power3.out",
+  nextTick(() => {
+    const cards = dashboardPageRef.value?.querySelectorAll(".stagger-card");
+    if (cards?.length) {
+      gsap.killTweensOf(cards);
+      gsap.from(cards, {
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: "power3.out",
+      });
+    }
   });
 
-  const [{ init, use }, { BarChart, PieChart }, { GridComponent }, { CanvasRenderer }] =
-    await Promise.all([
-      import("echarts/core"),
-      import("echarts/charts"),
-      import("echarts/components"),
-      import("echarts/renderers"),
-    ]);
+  const [
+    { init, use },
+    { BarChart, PieChart },
+    { GridComponent, TooltipComponent },
+    { CanvasRenderer },
+  ] = await Promise.all([
+    import("echarts/core"),
+    import("echarts/charts"),
+    import("echarts/components"),
+    import("echarts/renderers"),
+  ]);
 
-  use([BarChart, PieChart, GridComponent, CanvasRenderer]);
+  use([BarChart, PieChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
   if (barChartRef.value) {
     barChart = init(barChartRef.value);
     barChart.setOption({
       grid: { left: "10%", right: "0%", bottom: "10%", top: "10%" },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: {
+          type: "shadow",
+          shadowStyle: { color: "rgba(91, 78, 255, 0.08)" },
+        },
+        backgroundColor: "#1f2937",
+        borderColor: "transparent",
+        borderRadius: 12,
+        padding: [10, 14],
+        textStyle: { color: "#f3f6fb", fontSize: 13 },
+        formatter(params: any) {
+          const current = Array.isArray(params) ? params[0] : params;
+          const product = productSalesChartData.value[current?.dataIndex ?? 0];
+          const name = product?.name ?? current?.axisValue ?? "";
+          const value = product?.soldQuantity ?? current?.value ?? 0;
+
+          return `<div style="font-weight:700;margin-bottom:6px;font-size:13px">${name}</div><div style="font-size:12px;color:#a7b0c2">销量：<span style="color:#a78bfa;font-weight:700;font-size:14px">${value}</span> 件</div>`;
+        },
+      },
       xAxis: {
         type: "category",
-        data: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+        data: Array.from({ length: 12 }, (_, index) => String(index + 1)),
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: { color: "#9ca3af", margin: 16 },
       },
       yAxis: {
         type: "value",
+        min: 0,
+        max: 100,
         splitLine: { show: false },
         axisLabel: { color: "#9ca3af" },
       },
       series: [
         {
-          data: [
-            1400, 1800, 1900, 2400, 1450, 1850, 2100, 2400, 2800, 2300, 2700,
-            1900,
-          ],
+          data: productSalesChartData.value
+            .slice(0, 12)
+            .map((item) => item.soldQuantity),
           type: "bar",
           barWidth: "55%",
           itemStyle: {
             color: "#5b4eff",
             borderRadius: [20, 20, 20, 20],
+          },
+          emphasis: {
+            itemStyle: {
+              color: "#7c6fff",
+              shadowBlur: 16,
+              shadowColor: "rgba(91, 78, 255, 0.5)",
+            },
           },
         },
       ],
@@ -126,6 +287,13 @@ onMounted(async () => {
         },
       ],
     });
+    pieChart.setOption({
+      series: [
+        {
+          data: categoryChartData.value,
+        },
+      ],
+    });
   }
 
   window.addEventListener("resize", handleResize);
@@ -136,15 +304,26 @@ const handleResize = () => {
   pieChart?.resize();
 };
 
+onBeforeUnmount(() => {
+  const cards = dashboardPageRef.value?.querySelectorAll(".stagger-card");
+  if (cards?.length) {
+    gsap.killTweensOf(cards);
+    gsap.set(cards, { clearProps: "opacity,transform" });
+  }
+});
+
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   barChart?.dispose();
   pieChart?.dispose();
 });
+
+watch(productSalesChartData, updateBarChartData);
 </script>
 
 <template>
   <div
+    ref="dashboardPageRef"
     class="dashboard-page min-h-full p-8 text-gray-800 transition-colors duration-500"
     :class="
       isDark ? 'dashboard-dark bg-transparent text-gray-100' : 'bg-transparent'
@@ -168,7 +347,9 @@ onUnmounted(() => {
                 >销售额</span
               >
             </div>
-            <div class="mt-4 text-[32px] font-bold">¥128,450</div>
+            <div class="mt-4 text-[32px] font-bold">
+              {{ dashboardMetricDisplay.revenue }}
+            </div>
             <div class="mt-4">
               <span
                 class="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 transition-colors duration-300 group-hover:bg-green-400/20 group-hover:text-green-300 group-hover:backdrop-blur-sm"
@@ -185,7 +366,9 @@ onUnmounted(() => {
             >
               访问量
             </div>
-            <div class="mt-4 text-[32px] font-bold">3,450,210</div>
+            <div class="mt-4 text-[32px] font-bold">
+              {{ dashboardMetricDisplay.visits }}
+            </div>
             <div class="mt-4">
               <span
                 class="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 transition-colors duration-300 group-hover:bg-green-400/20 group-hover:text-green-300 group-hover:backdrop-blur-sm"
@@ -202,7 +385,9 @@ onUnmounted(() => {
             >
               订单数
             </div>
-            <div class="mt-4 text-[32px] font-bold">1,450</div>
+            <div class="mt-4 text-[32px] font-bold">
+              {{ dashboardMetricDisplay.orders }}
+            </div>
             <div class="mt-4">
               <span
                 class="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 transition-colors duration-300 group-hover:bg-green-400/20 group-hover:text-green-300 group-hover:backdrop-blur-sm"
@@ -219,7 +404,9 @@ onUnmounted(() => {
             >
               退货数
             </div>
-            <div class="mt-4 text-[32px] font-bold">82</div>
+            <div class="mt-4 text-[32px] font-bold">
+              {{ dashboardMetricDisplay.returns }}
+            </div>
             <div class="mt-4">
               <span
                 class="inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-500 transition-colors duration-300 group-hover:bg-red-400/20 group-hover:text-red-200 group-hover:backdrop-blur-sm"
@@ -241,7 +428,7 @@ onUnmounted(() => {
                 class="flex justify-between text-sm font-medium text-gray-600"
               >
                 <span class="min-w-0 truncate">{{ item.name }}</span>
-                <span class="font-bold text-gray-800">{{ item.percent }}%</span>
+                <span class="font-bold text-gray-800">{{ item.stock }} 件</span>
               </div>
               <div
                 class="h-2.5 w-full overflow-hidden rounded-full bg-gray-100"
@@ -261,23 +448,38 @@ onUnmounted(() => {
           <div class="flex items-center h-32">
             <div ref="pieChartRef" class="h-full w-1/2"></div>
             <div
-              class="grid w-1/2 grid-cols-2 gap-y-3 text-xs font-medium text-gray-600"
+              class="grid w-1/2 grid-cols-2 gap-y-3 text-xs font-medium text-gray-600 [&>div:nth-of-type(n+9)]:hidden"
             >
-              <div class="flex items-center gap-2">
+              <template
+                v-for="item in categoryDistribution"
+                :key="item.category"
+              >
+                <div class="flex min-w-0 items-center gap-2">
+                  <div
+                    class="h-2 w-2 shrink-0 rounded-full"
+                    :style="{ backgroundColor: item.color }"
+                  ></div>
+                  <span class="min-w-0 truncate">{{ item.category }}</span>
+                </div>
+                <div class="font-bold text-gray-800">
+                  {{ item.percentage }}%
+                </div>
+              </template>
+              <div class="hidden items-center gap-2">
                 <div class="h-2 w-2 rounded-full bg-[#ff8c00]"></div>
                 周边
               </div>
-              <div class="font-bold text-gray-800">20%</div>
-              <div class="flex items-center gap-2">
+              <div class="hidden font-bold text-gray-800">20%</div>
+              <div class="hidden items-center gap-2">
                 <div class="h-2 w-2 rounded-full bg-[#0088fe]"></div>
                 服饰
               </div>
-              <div class="font-bold text-gray-800">20%</div>
-              <div class="flex items-center gap-2">
+              <div class="hidden font-bold text-gray-800">20%</div>
+              <div class="hidden items-center gap-2">
                 <div class="h-2 w-2 rounded-full bg-[#00c49f]"></div>
                 收藏
               </div>
-              <div class="font-bold text-gray-800">18%</div>
+              <div class="hidden font-bold text-gray-800">18%</div>
             </div>
           </div>
         </div>
@@ -303,7 +505,7 @@ onUnmounted(() => {
                 >
                   <span class="min-w-0 truncate">{{ item.name }}</span>
                   <span class="font-bold text-gray-800"
-                    >{{ item.percent }}%</span
+                    >{{ item.soldQuantity }} 件</span
                   >
                 </div>
                 <div
@@ -322,7 +524,7 @@ onUnmounted(() => {
             <h2 class="mb-6 text-lg font-bold">滞销商品</h2>
             <div class="flex flex-col gap-5">
               <div
-                v-for="item in worstSelling"
+                v-for="item in slowSelling"
                 :key="item.name"
                 class="flex flex-col gap-2"
               >
@@ -331,7 +533,7 @@ onUnmounted(() => {
                 >
                   <span class="min-w-0 truncate">{{ item.name }}</span>
                   <span class="font-bold text-gray-800"
-                    >{{ item.percent }}%</span
+                    >{{ item.soldQuantity }} 件</span
                   >
                 </div>
                 <div

@@ -3,11 +3,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "prisma generate && nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@nuxtjs/supabase": "^2.0.6",
@@ -26,9 +29,13 @@
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
+    "@nuxtjs/color-mode": "^4.0.0",
     "@prisma/adapter-pg": "^7.8.0",
+    "lucide-vue-next": "^1.0.0",
     "pg": "^8.20.0",
     "prisma": "^7.8.0",
+    "radix-vue": "^1.9.17",
+    "shadcn-nuxt": "^2.7.3",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.2.8"

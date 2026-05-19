@@ -13,6 +13,8 @@ const deliveryAddress = ref('')
 const paymentMethod = ref('card')
 const cardNumber = ref('')
 const cardPassword = ref('')
+const orderSubmitting = ref(false)
+const orderError = ref('')
 const router = useRouter()
 const route = useRoute()
 
@@ -311,6 +313,13 @@ const unitPrice = computed(() => {
 })
 
 const normalizedQuantity = computed(() => Math.max(1, Math.floor(Number(quantity.value) || 1)))
+const selectedProductStock = computed(() => {
+  const stock = Number(selectedProduct.value?.stock)
+  return Number.isFinite(stock) ? stock : null
+})
+const hasEnoughSelectedStock = computed(() => {
+  return selectedProductStock.value === null || selectedProductStock.value >= normalizedQuantity.value
+})
 
 const totalPrice = computed(() => unitPrice.value * normalizedQuantity.value)
 
@@ -330,6 +339,10 @@ const canConfirmOrder = computed(() => customerName.value.trim() && deliveryAddr
 const cardNumberDigits = computed(() => cardNumber.value.replace(/\D/g, ''))
 
 const canCompletePayment = computed(() => {
+  if (!hasEnoughSelectedStock.value) {
+    return false
+  }
+
   if (paymentMethod.value !== 'card') {
     return true
   }
@@ -588,6 +601,35 @@ function applyMerchandiseProducts(productList) {
   }
 }
 
+function syncMerchandiseStock(merchandiseId, stock) {
+  const nextStock = Number(stock)
+
+  if (!merchandiseId || !Number.isFinite(nextStock)) {
+    return
+  }
+
+  const updatedProducts = merchandiseCache.value.map((product) => {
+    if (product.id !== merchandiseId) {
+      return product
+    }
+
+    return {
+      ...product,
+      stock: nextStock
+    }
+  })
+
+  merchandiseCache.value = updatedProducts
+  saveMerchandiseProductsToStorage(updatedProducts)
+
+  if (selectedProduct.value?.id === merchandiseId) {
+    selectedProduct.value = {
+      ...selectedProduct.value,
+      stock: nextStock
+    }
+  }
+}
+
 function restoreMerchandiseProductsFromStorage() {
   if (merchandiseCache.value.length) {
     pending.value = false
@@ -641,6 +683,11 @@ function clearSensitivePayment() {
   cardPassword.value = ''
 }
 
+function resetOrderSubmitState() {
+  orderSubmitting.value = false
+  orderError.value = ''
+}
+
 function openCheckout(product) {
   selectedProduct.value = product
   checkoutStep.value = 'order'
@@ -648,10 +695,12 @@ function openCheckout(product) {
   customerName.value = ''
   deliveryAddress.value = ''
   paymentMethod.value = 'card'
+  resetOrderSubmitState()
   clearSensitivePayment()
 }
 
 function closeCheckout() {
+  resetOrderSubmitState()
   clearSensitivePayment()
   checkoutEffectsVisible.value = false
   selectedProduct.value = null
@@ -694,13 +743,36 @@ function backCheckoutStep() {
   }
 }
 
-function completePayment() {
-  if (!canCompletePayment.value) {
+async function completePayment() {
+  if (!canCompletePayment.value || orderSubmitting.value || !selectedProduct.value) {
     return
   }
 
-  clearSensitivePayment()
-  checkoutStep.value = 'done'
+  try {
+    orderSubmitting.value = true
+    orderError.value = ''
+
+    const result = await $fetch('/api/orders', {
+      method: 'POST',
+      body: {
+        merchandiseId: selectedProduct.value.id,
+        quantity: normalizedQuantity.value,
+        name: customerName.value.trim(),
+        address: deliveryAddress.value.trim(),
+        paymentMethod: paymentMethod.value
+      }
+    })
+
+    syncMerchandiseStock(result?.merchandise?.id, result?.merchandise?.stock)
+    clearSensitivePayment()
+    checkoutStep.value = 'done'
+  } catch (err) {
+    orderError.value = err?.statusCode === 409
+      ? 'Not enough stock for this order.'
+      : 'Order submission failed. Please try again.'
+  } finally {
+    orderSubmitting.value = false
+  }
 }
 
 function skipHomeIntroOnce() {
@@ -867,6 +939,21 @@ onBeforeRouteLeave((to) => {
                 class="h-full w-full object-contain"
                 decoding="async"
               >
+            </div>
+
+            <div class="mt-6 grid gap-3 text-sm font-bold text-[#21485d] sm:grid-cols-3">
+              <div class="checkout-fact">
+                <span>{{ t('merchandise.category') }}</span>
+                <strong>{{ selectedProduct.category }}</strong>
+              </div>
+              <div class="checkout-fact">
+                <span>{{ t('merchandise.price') }}</span>
+                <strong>{{ selectedProduct.priceDisplay }}</strong>
+              </div>
+              <div class="checkout-fact">
+                <span>{{ t('merchandise.stock') }}</span>
+                <strong>{{ selectedProduct.stock ?? t('merchandise.available') }}</strong>
+              </div>
             </div>
           </div>
 
@@ -1045,6 +1132,10 @@ onBeforeRouteLeave((to) => {
                 </div>
               </div>
 
+              <p v-if="orderError" class="mt-4 rounded-[8px] bg-[#fff1f3] px-4 py-3 text-sm font-black text-[#d45b6a]">
+                {{ orderError }}
+              </p>
+
               <div class="mt-7 grid grid-cols-2 gap-3">
                 <button type="button" class="checkout-secondary" @click="backCheckoutStep">
                   {{ t('merchandise.back') }}
@@ -1052,10 +1143,10 @@ onBeforeRouteLeave((to) => {
                 <button
                   type="button"
                   class="checkout-primary"
-                  :disabled="!canCompletePayment"
+                  :disabled="!canCompletePayment || orderSubmitting"
                   @click="completePayment"
                 >
-                  {{ t('merchandise.payNow') }}
+                  {{ orderSubmitting ? '提交中...' : t('merchandise.payNow') }}
                 </button>
               </div>
             </div>

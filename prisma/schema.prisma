@@ -1,22 +1,69 @@
-// 1. 告诉 Prisma 生成 JS/TS 客户端代码
 generator client {
   provider = "prisma-client-js"
 }
 
-// 2. 告诉 Prisma 连接到你的 Supabase (PostgreSQL)
 datasource db {
   provider = "postgresql"
 }
 
-
-// 下面是你之前写的模型，保持不动即可
 model Merchandise {
-  id               String   @id @default(cuid())
+  id               String   @id
   name             String
   category         String
   priceDisplay     String
   imageDescription String
   imageUrl         String
   createdAt        DateTime @default(now())
-  sortOrder        Int      @default(0) 
+  sortOrder        Int      @default(0)
+  stock            Int      @default(100)   
+  orders           Order[]
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  merchandiseId String      
+  merchandise   Merchandise @relation(fields: [merchandiseId], references: [id])
+  productName   String
+  category      String      @default("Merch")
+  quantity      Int         @default(1)
+  amount        Float
+  status        String      @default("待处理")
+  customerInfo  String?
+  createdAt     DateTime    @default(now())
+}
+
+model Visit {
+  id        Int      @id @default(autoincrement())
+  path      String   @default("/")
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique // 周边、海报、挂件等
+  order Int    @default(0) // 用于前端显示的排序
+}
+
+model News {
+  id            String   @id @default(cuid())
+  date          String   // 对应数据中的 '2026.03.19'
+  title         String   
+  imageUrl      String   // 对应你上传的 .webp 地址
+  
+  // 核心内容
+  body          String[] // 多段正文内容
+  
+  // 事件模块 (UI 蓝色方框)
+  eventDate     String?  
+  eventPlace    String?  
+  eventContent  String?  
+  
+  // 底部注意事项
+  notes         String[]
+  
+  // 逻辑控制
+  sortOrder     Int      @default(0) // 解决 Supabase 排序混乱的理智方案
+  createdAt     DateTime @default(now()) // 唯一保留的系统时间戳
+
+  @@index([sortOrder])
 }

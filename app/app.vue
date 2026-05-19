@@ -13,9 +13,7 @@ const newsReturnMaskVisible = useState('news-return-mask-visible', () => false)
     />
 
     <NuxtLayout>
-      <Transition name="page-fade" mode="out-in">
-        <NuxtPage />
-      </Transition>
+      <NuxtPage />
     </NuxtLayout>
   </div>
 </template>

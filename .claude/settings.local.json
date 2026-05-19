@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(not exist *)",
+      "PowerShell(New-Item *)",
+      "Bash(ssh *)"
+    ]
+  }
+}
